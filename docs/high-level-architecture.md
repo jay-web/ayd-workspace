@@ -1,49 +1,21 @@
-# High-Level Architecture
+## Architecture Diagram
 
-## Core Flow
+```mermaid
+flowchart TD
 
-Browser  
-↓  
-Next.js Frontend  
-↓  
-Cognito  
-↓  
-API Gateway  
-↓  
-Lambda  
-↓  
-S3 / DynamoDB / OpenSearch  
-↓  
-Bedrock
+    A[Browser / User] --> B[Next.js Frontend]
 
-## System Zones
+    B --> C[Cognito Auth]
+    B --> D[API Gateway]
 
-### 1. Frontend
-- Next.js
-- user interface
-- routing
-- layouts
-- navigation
-- forms
+    D --> E[Lambda Functions]
 
-### 2. Application and Security
-- Cognito
-- API Gateway
-- Lambda
+    E --> F[S3 - PDF Storage]
+    E --> G[DynamoDB - App Data]
+    E --> H[OpenSearch - Vector Store]
 
-### 3. Data and AI
-- S3
-- DynamoDB
-- OpenSearch Serverless
-- Bedrock
+    E --> I[Bedrock - LLM & Embeddings]
 
-## Core System Layers
-
-### Authentication Layer
-Answers: who is the user?
-
-### Application Layer
-Answers: what action does the user want to perform?
-
-### AI Layer
-Answers: what grounded answer should be generated from retrieved context?
+    H --> E
+    F --> E
+```
