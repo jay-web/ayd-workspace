@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AYD Workspace
 
-## Getting Started
+A production-style AI workspace SaaS project.
 
-First, run the development server:
+## Goal
+Build a commercial-grade application where users can:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- sign up and log in
+- create workspaces
+- upload PDFs
+- ask questions from their documents
+- get AI-generated answers grounded in retrieved context
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Planned Stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Frontend
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Auth
+- Amazon Cognito
+- Authorization Code Flow with PKCE
+- No Amplify
 
-## Learn More
+### Backend
+- API Gateway
+- AWS Lambda
+- AWS SAM
 
-To learn more about Next.js, take a look at the following resources:
+### Storage
+- Amazon S3
+- DynamoDB
+- OpenSearch Serverless
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### AI / RAG
+- Custom RAG pipeline
+- Amazon Bedrock
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Current Progress
+- Next.js app created in WSL
+- Landing page created
+- Login page created
+- App layout created
+- Dashboard page created
+- Documents page created
+- Chat page created
+- Sidebar navigation added
+- Active sidebar state added
+- Project pushed to GitHub
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Learning Approach
+This project is being built step by step with deep focus on:
+- architecture
+- production thinking
+- interview readiness
+- practical AWS and Next.js understanding
