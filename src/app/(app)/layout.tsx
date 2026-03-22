@@ -1,5 +1,6 @@
 "use client";
 
+import Header from "@/components/Headers";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -18,11 +19,12 @@ export default function AppLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+       <Header />
       <div className="flex min-h-screen">
         <aside className="w-64 border-r border-gray-200 bg-white p-6">
-          <h2 className="text-xl font-bold text-gray-900">AYD Workspace</h2>
+          {/* <h2 className="text-xl font-bold text-gray-900">AYD Workspace</h2> */}
 
-          <nav className="mt-6 flex flex-col gap-3">
+          <nav className="flex flex-col gap-3">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
 
@@ -41,6 +43,7 @@ export default function AppLayout({
               );
             })}
           </nav>
+        
         </aside>
 
         <main className="flex-1 p-6">{children}</main>
