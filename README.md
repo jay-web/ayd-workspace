@@ -38,16 +38,7 @@ Build a commercial-grade application where users can:
 - Amazon Bedrock
 
 ## Current Progress
-- Next.js app created in WSL
-- Landing page created
-- Login page created
-- App layout created
-- Dashboard page created
-- Documents page created
-- Chat page created
-- Sidebar navigation added
-- Active sidebar state added
-- Project pushed to GitHub
+- Authenication layer implemented to signIn/signOut
 
 ## Learning Approach
 This project is being built step by step with deep focus on:
