@@ -5,7 +5,13 @@ export async function proxy(req: NextRequest) {
   const session = await getSession(req);
 
   if (!session) {
-    const res = NextResponse.redirect(new URL("/login", req.url));
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set(
+  "redirect",
+  `${req.nextUrl.pathname}${req.nextUrl.search}`
+);
+
+    const res = NextResponse.redirect(loginUrl);
     res.cookies.delete("session");
     return res;
   }

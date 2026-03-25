@@ -4,15 +4,32 @@ import { verifyToken } from "./verifyToken";
 export async function getSession(req: NextRequest) {
   const token = req.cookies.get("session")?.value;
 
-  if (!token) return null;
+  if (token) {
+    const payload = await verifyToken(token);
+    if (payload) {
+      return {
+        userId: payload.sub,
+        email: payload.email,
+        payload,
+      };
+    }
+  }
+  
+  const refreshToken = req.cookies.get("refresh")?.value;
+  if (!refreshToken) return null;
+  try {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/auth/refresh`, {
+      method: "POST",
+      headers: {
+        cookie: req.headers.get("cookie") || "",
+      },
+    });
 
-  const payload = await verifyToken(token);
+    if (!res.ok) return null;
 
-  if (!payload) return null;
+    return { refreshed: true }; 
+  } catch {
+    return null;
+  }
 
-  return {
-    userId: payload.sub,
-    email: payload.email,
-    payload,
-  };
 }
