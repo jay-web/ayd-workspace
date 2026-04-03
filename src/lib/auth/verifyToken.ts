@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
 
 const userPoolId = process.env.COGNITO_USER_POOL_ID!;
-const region = process.env.COGNITO_REGION!;
+const region = process.env.AWS_REGION!;
 const clientId = process.env.COGNITO_CLIENT_ID!;
 
 const issuer = `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`;
