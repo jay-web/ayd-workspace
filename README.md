@@ -30,7 +30,7 @@ Build a commercial-grade application where users can:
 
 ### Storage
 - Amazon S3
-- DynamoDB
+- RDS(Postgres)
 - OpenSearch Serverless
 
 ### AI / RAG
