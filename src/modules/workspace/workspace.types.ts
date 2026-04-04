@@ -31,3 +31,12 @@ export type WorkspaceDetails = {
   role: WorkspaceRole;
   joinedAt: string;
 };
+
+export type ListWorkspacesResponse = {
+  workspaces: WorkspaceListItem[];
+};
+
+export type CreateWorkspaceResponse = {
+  workspace: WorkspaceRow;
+  membership: WorkspaceMembershipRow;
+};

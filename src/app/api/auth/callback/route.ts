@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
   }
 
    const idToken = tokenData.id_token;
-    const response = NextResponse.redirect("http://localhost:3000/dashboard");
+    const response = NextResponse.redirect("http://localhost:3000/workspaces");
 
       // 🍪 Store session (ID token)
   response.cookies.set("session", idToken, {

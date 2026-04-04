@@ -21,7 +21,7 @@ export default function LoginPage() {
       if (!active) return;
 
       if (ok) {
-        router.replace(redirect || "/dashboard");
+        router.replace(redirect || "/workspaces");
       }
     }
 
