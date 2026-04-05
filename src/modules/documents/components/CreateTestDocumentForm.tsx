@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 type Props = {
   workspaceId: string;
@@ -18,41 +19,45 @@ export default function CreateTestDocumentForm({ workspaceId }: Props) {
   const [error, setError] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    try {
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/documents`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          originalFileName,
-          mimeType,
-          sizeBytes: Number(sizeBytes),
-        }),
-      });
+  try {
+    const res = await fetch(`/api/v1/workspaces/${workspaceId}/documents`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        originalFileName,
+        mimeType,
+        sizeBytes: Number(sizeBytes),
+      }),
+    });
 
-      if (!res.ok) {
-        throw new Error("Failed to create document");
-      }
-
-      setName("");
-      setOriginalFileName("");
-      setMimeType("application/pdf");
-      setSizeBytes("1024");
-
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
-    } finally {
-      setLoading(false);
+    if (!res.ok) {
+      throw new Error("Failed to create document");
     }
-  }
 
+    setName("");
+    setOriginalFileName("");
+    setMimeType("application/pdf");
+    setSizeBytes("1024");
+
+    toast.success("Document created successfully");
+    router.refresh();
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : "Something went wrong";
+
+    setError(message);
+    toast.error(message);
+  } finally {
+    setLoading(false);
+  }
+}
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
       <div className="mb-4">
