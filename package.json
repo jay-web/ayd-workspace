@@ -13,6 +13,7 @@
     "@aws-sdk/lib-dynamodb": "^3.1019.0",
     "clsx": "^2.1.1",
     "jose": "^6.2.2",
+    "lucide-react": "^1.7.0",
     "next": "16.1.7",
     "pg": "^8.20.0",
     "react": "19.2.3",
