@@ -1,16 +1,16 @@
 import { DocumentStatus } from "@/contracts/document";
 
 export type CreateDocumentInput = {
+  documentId: string;
   workspaceId: string;
   name: string;
   originalFileName: string;
   mimeType: string;
   sizeBytes: number;
-  uploadedBy: string;
   storageKey: string;
-  status?: DocumentStatus;
+  uploadedBy: string;
+  status?: DocumentStatus
 };
-
 export type DocumentRow = {
   document_id: string;
   workspace_id: string;
@@ -30,4 +30,20 @@ export type DocumentListRow = {
   name: string;
   status: DocumentStatus;
   created_at: Date | string;
+};
+
+export type DocumentStatsRow = {
+  total_documents: string | number;
+  uploaded_documents: string | number;
+  processing_documents: string | number;
+  ready_documents: string | number;
+  failed_documents: string | number;
+};
+
+export type DocumentStats = {
+  totalDocuments: number;
+  uploadedDocuments: number;
+  processingDocuments: number;
+  readyDocuments: number;
+  failedDocuments: number;
 };

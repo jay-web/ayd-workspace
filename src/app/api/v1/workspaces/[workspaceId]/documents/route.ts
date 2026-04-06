@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "crypto";
 import {
   createDocument,
   listDocumentsByWorkspace,
 } from "@/modules/documents/document.repo";
+import { createDocumentUploadUrl } from "@/modules/documents/document.storage";
 
 type RouteContext = {
   params: Promise<{ workspaceId: string }>;
 };
 
-// GET → list documents for workspace
+// GET → list documents
 export async function GET(
   _req: NextRequest,
   { params }: RouteContext
@@ -20,7 +22,7 @@ export async function GET(
   return NextResponse.json({ items });
 }
 
-// POST → create document metadata
+// POST → create document + presigned URL
 export async function POST(
   req: NextRequest,
   { params }: RouteContext
@@ -36,12 +38,24 @@ export async function POST(
     sizeBytes,
   } = body;
 
-  // ⚠️ TEMP ( replace with real auth later)
   const uploadedBy = "user_temp";
 
-  const storageKey = `workspaces/${workspaceId}/${Date.now()}_${originalFileName}`;
+  // ✅ Step 1: generate documentId
+  const documentId = randomUUID();
 
+  // ✅ Step 2: build final storage key
+  const fileExtension = originalFileName.split(".").pop() ?? "bin";
+
+  const storageKey = [
+    "workspaces",
+    workspaceId,
+    "documents",
+    `${documentId}.${fileExtension}`,
+  ].join("/");
+
+  // ✅ Step 3: create DB row
   const document = await createDocument({
+    documentId,
     workspaceId,
     name,
     originalFileName,
@@ -49,7 +63,18 @@ export async function POST(
     sizeBytes,
     uploadedBy,
     storageKey,
+    status: "UPLOADING",
   });
 
-  return NextResponse.json({ document });
+  // ✅ Step 4: generate presigned URL
+  const uploadUrl = await createDocumentUploadUrl({
+    key: storageKey,
+    contentType: mimeType,
+  });
+
+  // ✅ Step 5: return both
+  return NextResponse.json({
+    document,
+    uploadUrl,
+  });
 }

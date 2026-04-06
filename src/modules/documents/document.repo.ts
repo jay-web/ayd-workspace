@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import type { Document, DocumentListItem } from "@/contracts/document";
 import { db } from "@/lib/db/postgres";
 import type {
@@ -47,8 +46,7 @@ function mapDocumentStatsRow(row: DocumentStatsRow): DocumentStats {
 export async function createDocument(
   input: CreateDocumentInput
 ): Promise<Document> {
- const documentId = randomUUID();
-  const status = input.status ?? "UPLOADED";
+  const status = input.status ?? "UPLOADING";
 
   const result = await db.query<DocumentRow>(
     `
@@ -82,7 +80,7 @@ export async function createDocument(
         updated_at
     `,
     [
-      documentId,
+      input.documentId,
       input.workspaceId,
       input.name,
       input.originalFileName,
