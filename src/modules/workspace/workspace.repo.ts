@@ -120,3 +120,21 @@ export async function getWorkspaceForUser(params: {
 
   return result.rows[0] ?? null;
 }
+
+export async function isUserMemberOfWorkspace(
+  userId: string,
+  workspaceId: string
+): Promise<boolean> {
+  const result = await db.query(
+    `
+      SELECT 1
+      FROM workspace_memberships
+      WHERE user_id = $1
+        AND workspace_id = $2
+      LIMIT 1
+    `,
+    [userId, workspaceId]
+  );
+
+  return result.rowCount !== null && result.rowCount > 0;
+}

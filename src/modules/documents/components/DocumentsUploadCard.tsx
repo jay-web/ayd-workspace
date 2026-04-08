@@ -92,9 +92,13 @@ export default function DocumentsUploadCard({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          status: "READY",
+          status: "PROCESSING",
         }),
       });
+
+      await fetch(`/api/v1/documents/${data.document.documentId}/complete-upload`, {
+  method: "POST",
+});
 
       toast.success("Document uploaded successfully");
       setSelectedFile(null);
@@ -177,11 +181,10 @@ export default function DocumentsUploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group cursor-pointer rounded-2xl border border-dashed px-6 py-10 text-center transition ${
-          isDragging
+        className={`group cursor-pointer rounded-2xl border border-dashed px-6 py-10 text-center transition ${isDragging
             ? "border-gray-500 bg-gray-100"
             : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
-        }`}
+          }`}
       >
         <p className="text-sm font-medium text-gray-700">
           {isDragging ? "Drop file here" : "Drag and drop files here"}

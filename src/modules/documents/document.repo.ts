@@ -153,7 +153,7 @@ export async function getDocumentStatsByWorkspace(
     `
       SELECT
         COUNT(*) AS total_documents,
-        COUNT(*) FILTER (WHERE status = 'UPLOADED') AS uploaded_documents,
+        COUNT(*) FILTER (WHERE status = 'UPLOADING') AS uploaded_documents,
         COUNT(*) FILTER (WHERE status = 'PROCESSING') AS processing_documents,
         COUNT(*) FILTER (WHERE status = 'READY') AS ready_documents,
         COUNT(*) FILTER (WHERE status = 'FAILED') AS failed_documents
@@ -164,4 +164,39 @@ export async function getDocumentStatsByWorkspace(
   );
 
   return mapDocumentStatsRow(result.rows[0]);
+}
+
+
+export async function updateDocumentStatus(
+  documentId: string,
+  status: DocumentRow["status"]
+): Promise<Document | null> {
+  const result = await db.query<DocumentRow>(
+    `
+      UPDATE documents
+      SET
+        status = $2,
+        updated_at = NOW()
+      WHERE document_id = $1
+      RETURNING
+        document_id,
+        workspace_id,
+        name,
+        original_file_name,
+        mime_type,
+        size_bytes,
+        storage_key,
+        uploaded_by,
+        status,
+        created_at,
+        updated_at
+    `,
+    [documentId, status]
+  );
+
+  if (result.rows.length === 0) {
+    return null;
+  }
+
+  return mapDocumentRow(result.rows[0]);
 }

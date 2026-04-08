@@ -5,6 +5,8 @@ import {
   listDocumentsByWorkspace,
 } from "@/modules/documents/document.repo";
 import { createDocumentUploadUrl } from "@/modules/documents/document.storage";
+import { getSession } from "@/lib/auth/getSession";
+import { isUserMemberOfWorkspace } from "@/modules/workspace/workspace.repo";
 
 type RouteContext = {
   params: Promise<{ workspaceId: string }>;
@@ -17,6 +19,28 @@ export async function GET(
 ) {
   const { workspaceId } = await params;
 
+  const session = await getSession(_req);
+
+  if (!session?.userId) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
+  const isMember = await isUserMemberOfWorkspace(
+    session.userId,
+    workspaceId
+  );
+
+  if (!isMember) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
+    );
+  }
+
+
   const items = await listDocumentsByWorkspace(workspaceId);
 
   return NextResponse.json({ items });
@@ -28,6 +52,25 @@ export async function POST(
   { params }: RouteContext
 ) {
   const { workspaceId } = await params;
+  const session = await getSession(req);
+
+if (!session?.userId) {
+  return NextResponse.json(
+    { error: "Unauthorized" },
+    { status: 401 }
+  );
+}
+const isMember = await isUserMemberOfWorkspace(
+  session.userId,
+  workspaceId
+);
+
+if (!isMember) {
+  return NextResponse.json(
+    { error: "Forbidden" },
+    { status: 403 }
+  );
+}
 
   const body = await req.json();
 
@@ -38,7 +81,7 @@ export async function POST(
     sizeBytes,
   } = body;
 
-  const uploadedBy = "user_temp";
+ const uploadedBy = session.userId;
 
   // ✅ Step 1: generate documentId
   const documentId = randomUUID();
