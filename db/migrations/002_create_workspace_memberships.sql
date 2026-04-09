@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS workspace_memberships (
   workspace_id UUID NOT NULL,
   user_id TEXT NOT NULL,
-  role TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('OWNER', 'ADMIN', 'MEMBER')),
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   PRIMARY KEY (workspace_id, user_id),
