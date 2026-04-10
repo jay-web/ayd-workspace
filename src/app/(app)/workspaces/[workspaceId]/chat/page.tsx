@@ -9,8 +9,8 @@ export default async function WorkspaceChatPage({
 
   return (
     <section>
-      <h2 className="text-5xl font-bold text-slate-900">Chat</h2>
-      <p className="mt-6 text-2xl text-slate-600">
+      <h2 className="text-3xl font-bold text-slate-900 sm:text-5xl">Chat</h2>
+      <p className="mt-4 text-base text-slate-600 sm:text-2xl">
         Chat for workspace: {workspaceId}
       </p>
     </section>

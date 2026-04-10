@@ -77,13 +77,13 @@ export function WorkspacesPage() {
   }
 
   return (
-    <section className="px-6 py-8 md:px-10">
+    <section className="px-6 py-10 sm:px-8 lg:px-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
             Workspaces
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-3 max-w-2xl text-base text-gray-600 sm:text-lg">
             Create and manage your document workspaces.
           </p>
         </div>

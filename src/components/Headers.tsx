@@ -42,26 +42,23 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-      <div className="flex h-[72px] items-center justify-between px-6 lg:px-8">
-        {/* Left side */}
+      <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-sm font-bold text-white shadow-sm">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-sm font-semibold text-white shadow-sm">
             AYD
           </div>
 
           <div className="flex flex-col leading-tight">
-            <h1 className="text-[18px] font-semibold tracking-[-0.02em] text-gray-900">
+            <h1 className="text-sm font-semibold tracking-[-0.02em] text-gray-900 sm:text-base">
               AYD Workspace
             </h1>
-            <p className="text-xs font-medium text-gray-500">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 sm:text-xs">
               Intelligent document workspace
             </p>
           </div>
         </div>
 
-        {/* Right side */}
-       {/* Right side */}
-<div className="relative" ref={menuRef}>
+        <div className="relative" ref={menuRef}>
   <button
     onClick={() => setOpen(!open)}
     className={`flex items-center transition-all duration-300 ${

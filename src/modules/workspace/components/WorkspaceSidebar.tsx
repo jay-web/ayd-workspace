@@ -19,12 +19,12 @@ export function WorkspaceSidebar({ workspaceId }: { workspaceId: string }) {
   }
 
   return (
-    <aside className="w-[220px] border-r bg-white px-4 py-6">
-      <p className="mb-3 px-2 text-xs font-semibold text-gray-400 uppercase">
+    <aside className="w-full rounded-[28px] border border-gray-200 bg-white px-4 py-6 shadow-sm md:w-[250px] md:border-b-0 md:border-r md:px-5 md:py-6">
+      <p className="mb-4 px-2 text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">
         Workspace
       </p>
 
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-3">
         <Link
           href={`/workspaces/${workspaceId}`}
           className={`${baseClasses} ${

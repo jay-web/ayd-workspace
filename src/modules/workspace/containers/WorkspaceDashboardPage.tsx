@@ -111,19 +111,19 @@ export function WorkspaceDashboardPage({
   ];
 
   return (
-    <section className="space-y-8">
-      <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div>
-            <p className="text-sm font-medium uppercase tracking-wide text-emerald-700">
+    <section className="mx-auto max-w-7xl space-y-8 px-6 py-10 sm:px-8 lg:px-10">
+      <div className="rounded-[32px] border border-gray-200 bg-white p-8 shadow-xl">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-emerald-700">
               Workspace Overview
             </p>
 
-            <h1 className="mt-2 text-4xl font-bold tracking-tight text-slate-900">
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
               {workspace.name}
             </h1>
 
-            <p className="mt-3 text-base text-slate-600">
+            <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg">
               Manage documents and collaborate inside this workspace.
             </p>
           </div>
@@ -163,10 +163,10 @@ export function WorkspaceDashboardPage({
       {dashboard.recentDocuments.map((doc) => (
         <div
           key={doc.documentId}
-          className="flex items-center justify-between px-5 py-4"
+          className="flex flex-col gap-4 px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
         >
-          <div>
-            <p className="text-sm font-medium text-gray-900">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-gray-900">
               {doc.name}
             </p>
             <p className="mt-1 text-xs text-gray-500">
@@ -174,7 +174,7 @@ export function WorkspaceDashboardPage({
             </p>
           </div>
 
-          <span className="rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-700">
+          <span className="shrink-0 rounded-full border border-gray-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-700">
             {doc.status}
           </span>
         </div>

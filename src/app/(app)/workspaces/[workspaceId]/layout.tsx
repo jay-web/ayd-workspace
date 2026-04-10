@@ -15,10 +15,10 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="grid min-h-[calc(100vh-88px)] grid-cols-[260px_1fr]">
+      <div className="grid min-h-[calc(100vh-72px)] grid-cols-1 gap-6 md:grid-cols-[260px_1fr]">
         <WorkspaceSidebar workspaceId={workspaceId} />
 
-        <main className="p-8">{children}</main>
+        <main className="p-4 sm:p-6 md:p-8">{children}</main>
       </div>
     </div>
   );

@@ -47,10 +47,12 @@ export default async function WorkspaceDocumentsPage({
   const documents = await listDocumentsByWorkspace(workspaceId);
 
   return (
-    <div className="space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-10 sm:px-8 lg:px-10">
       <div>
-        <h1 className="text-2xl font-semibold text-gray-900">Documents</h1>
-        <p className="mt-1 text-sm text-gray-500">
+        <h1 className="text-3xl font-semibold text-gray-900 sm:text-4xl">
+          Documents
+        </h1>
+        <p className="mt-2 max-w-2xl text-base text-gray-600 sm:text-lg">
           Manage documents for this workspace.
         </p>
       </div>

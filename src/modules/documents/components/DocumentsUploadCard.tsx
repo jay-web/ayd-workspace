@@ -157,7 +157,7 @@ export default function DocumentsUploadCard({
   }
 
   return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="rounded-[32px] border border-gray-200 bg-white p-7 shadow-xl">
       <input
         ref={inputRef}
         type="file"
@@ -167,11 +167,11 @@ export default function DocumentsUploadCard({
         disabled={uploading}
       />
 
-      <div className="mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">
+      <div className="mb-5">
+        <h2 className="text-xl font-semibold text-gray-900">
           Upload Documents
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-2 text-sm leading-6 text-gray-500 sm:text-base">
           Add files to this workspace to enable search and chat.
         </p>
       </div>
@@ -181,7 +181,7 @@ export default function DocumentsUploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group cursor-pointer rounded-2xl border border-dashed px-6 py-10 text-center transition ${isDragging
+        className={`group cursor-pointer rounded-[28px] border border-dashed px-6 py-12 text-center transition ${isDragging
             ? "border-gray-500 bg-gray-100"
             : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
           }`}
