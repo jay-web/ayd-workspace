@@ -10,28 +10,19 @@ type RouteContext = {
   params: Promise<{ documentId: string }>;
 };
 
-export async function POST(
-  _req: NextRequest,
-  { params }: RouteContext
-) {
+export async function POST(_req: NextRequest, { params }: RouteContext) {
   const { documentId } = await params;
 
   const session = await getSession(_req);
 
   if (!session?.userId) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const document = await getDocumentById(documentId);
 
   if (!document) {
-    return NextResponse.json(
-      { error: "Document not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
   }
 
   const isMember = await isUserMemberOfWorkspace(
@@ -40,28 +31,17 @@ export async function POST(
   );
 
   if (!isMember) {
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
- const updated = await updateDocumentStatus(documentId, "PROCESSING");
+  const updated = await updateDocumentStatus(documentId, "PROCESSING");
 
-if (!updated) {
-  return NextResponse.json(
-    { error: "Failed to update document status" },
-    { status: 500 }
-  );
-}
-
-  setTimeout(async () => {
-    try {
-      await updateDocumentStatus(documentId, "READY");
-    } catch (error) {
-      console.error("Failed to mark document READY", error);
-    }
-  }, 3000);
+  if (!updated) {
+    return NextResponse.json(
+      { error: "Failed to update document status" },
+      { status: 500 }
+    );
+  }
 
   return NextResponse.json({
     ok: true,

@@ -1,6 +1,10 @@
 import type { SQSEvent, SQSRecord } from "aws-lambda";
 import { readS3ObjectBuffer } from "@/lib/aws/s3";
 import { ingestDocumentChunks } from "./document.ingestion";
+import {
+  chunkTextByWords,
+  extractTextFromDocument,
+} from "./document.parser";
 
 type S3EventRecord = {
   s3: {
@@ -39,7 +43,7 @@ function createMockEmbedding(dim = 1024): number[] {
 }
 
 export async function handleDocumentIngestionEvent(event: SQSEvent) {
-  const bucketName = getRequiredEnv("S3_BUCKET_NAME");
+  const bucketName = getRequiredEnv("DOCUMENTS_BUCKET_NAME");
 
   for (const record of event.Records) {
     const storageKey = getStorageKeyFromSqsRecord(record);
@@ -53,37 +57,42 @@ export async function handleDocumentIngestionEvent(event: SQSEvent) {
       eTag: s3File.eTag,
     });
 
-    const placeholderChunkText = `S3 download successful. contentType=${
-      s3File.contentType ?? "unknown"
-    }, size=${s3File.contentLength} bytes`;
+    const extractedText = await extractTextFromDocument({
+      buffer: s3File.buffer,
+      contentType: s3File.contentType,
+      storageKey,
+    });
+
+    const contentChunks = chunkTextByWords(extractedText, {
+      chunkWordCount: 220,
+      overlapWordCount: 40,
+    });
+
+    if (!contentChunks.length) {
+      throw new Error("No chunks generated from extracted document text");
+    }
+
+    console.log("Document text extracted successfully", {
+      storageKey,
+      extractedTextLength: extractedText.length,
+      chunkCount: contentChunks.length,
+    });
 
     await ingestDocumentChunks({
       storageKey,
-      chunks: [
-        {
-          content: placeholderChunkText,
-          embedding: createMockEmbedding(),
-          pageNumber: 1,
-          tokenCount: 10,
-          metadata: {
-            source: "s3-worker-step-1",
-            chunkLabel: "chunk-1",
-            storageKey,
-            contentType: s3File.contentType,
-            contentLength: s3File.contentLength,
-          },
+      chunks: contentChunks.map((content, index) => ({
+        content,
+        embedding: createMockEmbedding(),
+        pageNumber: null,
+        tokenCount: content.split(/\s+/).filter(Boolean).length,
+        metadata: {
+          source: "pdf-text-worker-step-2",
+          chunkIndex: index,
+          storageKey,
+          contentType: s3File.contentType,
+          contentLength: s3File.contentLength,
         },
-        {
-          content: "Second mock chunk after successful S3 download.",
-          embedding: createMockEmbedding(),
-          pageNumber: 1,
-          tokenCount: 10,
-          metadata: {
-            source: "s3-worker-step-1",
-            chunkLabel: "chunk-2",
-          },
-        },
-      ],
+      })),
     });
   }
 }

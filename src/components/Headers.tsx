@@ -42,17 +42,17 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-gray-200/80 bg-white/90 backdrop-blur supports-[backdrop-filter]:bg-white/75">
-      <div className="flex h-[72px] items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-sm font-semibold text-white shadow-sm">
+      <div className="flex h-[60px] items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-700 to-emerald-500 text-xs font-semibold text-white shadow-sm">
             AYD
           </div>
 
           <div className="flex flex-col leading-tight">
-            <h1 className="text-sm font-semibold tracking-[-0.02em] text-gray-900 sm:text-base">
+            <h1 className="text-sm font-semibold tracking-[-0.02em] text-gray-900">
               AYD Workspace
             </h1>
-            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-gray-500 sm:text-xs">
+            <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-gray-500 sm:text-[11px]">
               Intelligent document workspace
             </p>
           </div>
@@ -63,26 +63,26 @@ export default function Header() {
     onClick={() => setOpen(!open)}
     className={`flex items-center transition-all duration-300 ${
       open
-        ? "gap-3 rounded-full border border-gray-200 bg-white pl-3 pr-2 py-1.5 shadow-md"
+        ? "gap-2.5 rounded-full border border-gray-200 bg-white py-1 pl-2.5 pr-1.5 shadow-sm"
         : "justify-center"
     }`}
   >
     {open && (
       <div className="hidden text-right sm:block">
-        <p className="max-w-[160px] truncate text-sm font-medium text-gray-800">
+        <p className="max-w-[160px] truncate text-xs font-medium text-gray-800">
           {user?.email || "User"}
         </p>
         {/* <p className="text-xs text-gray-500">Account</p> */}
       </div>
     )}
 
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white ring-4 ring-gray-100">
+    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white ring-2 ring-gray-100">
       {initials}
     </div>
   </button>
 
   {open && (
-    <div className="absolute right-0 mt-3 w-56 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl">
+    <div className="absolute right-0 mt-2 w-52 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
       <div className="border-b border-gray-100 px-4 py-3">
         <p className="text-xs font-medium uppercase tracking-wide text-gray-400">
           Signed in as
@@ -94,7 +94,7 @@ export default function Header() {
 
       <button
         onClick={handleLogout}
-        className="w-full px-4 py-3 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+        className="w-full px-4 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
       >
         Logout
       </button>

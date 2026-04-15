@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: AYD document processing infra
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 1024
+
+Resources:
+  IngestionDlq:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "ayd-ingestion-dlq-${Environment}"
+
+  IngestionQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Sub "ayd-ingestion-queue-${Environment}"
+      VisibilityTimeout: 180
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt IngestionDlq.Arn
+        maxReceiveCount: 5
+
+  IngestionWorkerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ../../workers/ingestion-worker
+      DockerTag: python312-v1
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub "ayd-ingestion-worker-${Environment}"
+      Architectures:
+        - x86_64
+      Policies:
+        - AWSLambdaSQSQueueExecutionRole
+      Environment:
+        Variables:
+          APP_ENV: !Ref Environment
+          LOG_LEVEL: INFO
+      Events:
+        IngestionQueueTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt IngestionQueue.Arn
+            BatchSize: 1
+
+  OcrResultsWorkerFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ../../workers/ocr-results-worker
+      DockerTag: python312-v1
+    Properties:
+      PackageType: Image
+      FunctionName: !Sub "ayd-ocr-results-worker-${Environment}"
+      Architectures:
+        - x86_64
+      Environment:
+        Variables:
+          APP_ENV: !Ref Environment
+          LOG_LEVEL: INFO
+
+Outputs:
+  IngestionQueueArn:
+    Value: !GetAtt IngestionQueue.Arn
+
+  IngestionDlqArn:
+    Value: !GetAtt IngestionDlq.Arn
+
+  IngestionWorkerFunctionName:
+    Value: !Ref IngestionWorkerFunction
+
+  OcrResultsWorkerFunctionName:
+    Value: !Ref OcrResultsWorkerFunction
