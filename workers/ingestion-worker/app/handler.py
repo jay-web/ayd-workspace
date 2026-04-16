@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import unquote_plus
 from app.s3_reader import read_s3_object
+from app.pdf_extractor import extract_pdf_pages
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -61,6 +62,14 @@ def process_document_message(
         bucketName=bucket_name,
         storageKey=storage_key,
         fileSizeBytes=len(file_bytes),
+    )
+
+    pages = extract_pdf_pages(file_bytes)
+
+    log_info(
+        "document.process.pdf_extracted",
+        pageCount=len(pages),
+        sampleText=pages[0]["text"][:200] if pages else "",
     )
 
     log_info(
