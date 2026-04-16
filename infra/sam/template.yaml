@@ -7,6 +7,10 @@ Parameters:
     Type: String
     Default: dev
 
+  DocumentBucketName:
+    Type: String
+    Default: ayd-workspace-jay-docs
+
 Globals:
   Function:
     Timeout: 30
@@ -27,6 +31,52 @@ Resources:
         deadLetterTargetArn: !GetAtt IngestionDlq.Arn
         maxReceiveCount: 5
 
+  IngestionQueuePolicy:
+    Type: AWS::SQS::QueuePolicy
+    Properties:
+      Queues:
+        - !Ref IngestionQueue
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowS3SendMessage
+            Effect: Allow
+            Principal:
+              Service: s3.amazonaws.com
+            Action: sqs:SendMessage
+            Resource: !GetAtt IngestionQueue.Arn
+            Condition:
+              ArnEquals:
+                aws:SourceArn: !Sub "arn:aws:s3:::${DocumentBucketName}"
+
+  DocumentsBucket:
+    Type: AWS::S3::Bucket
+    DependsOn: IngestionQueuePolicy
+    Properties:
+      BucketName: !Ref DocumentBucketName
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - http://localhost:3000
+            AllowedMethods:
+              - PUT
+              - GET
+              - HEAD
+            AllowedHeaders:
+              - "*"
+            ExposedHeaders:
+              - ETag
+            MaxAge: 3000
+      NotificationConfiguration:
+        QueueConfigurations:
+          - Event: s3:ObjectCreated:*
+            Queue: !GetAtt IngestionQueue.Arn
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .pdf
+
   IngestionWorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -40,10 +90,17 @@ Resources:
         - x86_64
       Policies:
         - AWSLambdaSQSQueueExecutionRole
+        - Statement:
+            - Sid: AllowReadDocumentsBucket
+              Effect: Allow
+              Action:
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${DocumentBucketName}/*"
       Environment:
         Variables:
           APP_ENV: !Ref Environment
           LOG_LEVEL: INFO
+          DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
       Events:
         IngestionQueueTrigger:
           Type: SQS
@@ -66,8 +123,12 @@ Resources:
         Variables:
           APP_ENV: !Ref Environment
           LOG_LEVEL: INFO
+          DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
 
 Outputs:
+  DocumentBucketName:
+    Value: !Ref DocumentsBucket
+
   IngestionQueueArn:
     Value: !GetAtt IngestionQueue.Arn
 
