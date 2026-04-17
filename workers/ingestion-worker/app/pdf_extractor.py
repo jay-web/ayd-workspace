@@ -11,8 +11,8 @@ def extract_pdf_pages(file_bytes: bytes):
         text = page.get_text()
 
         pages.append({
-            "page": i + 1,
+            "page_number": i + 1,
             "text": text.strip()
-        })
+})
 
     return pages

@@ -5,6 +5,7 @@ from typing import Any, Dict, Optional, Tuple
 from urllib.parse import unquote_plus
 from app.s3_reader import read_s3_object
 from app.pdf_extractor import extract_pdf_pages
+from app.chunker import chunk_document
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -65,6 +66,15 @@ def process_document_message(
     )
 
     pages = extract_pdf_pages(file_bytes)
+    chunks = chunk_document(pages)
+
+    for chunk in chunks:
+        print("Chunk index:", chunk["chunk_index"])
+        print("Page number:", chunk["page_number"])
+        print("Token count:", chunk["token_count"])
+        print("Metadata:", chunk["metadata"])
+        print("Preview:", chunk["content"][:200])
+        print("----")
 
     log_info(
         "document.process.pdf_extracted",
