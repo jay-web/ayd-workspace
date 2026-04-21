@@ -8,6 +8,15 @@ Parameters:
   DocumentBucketName:
     Type: String
     Default: ayd-workspace-jay-docs
+  DatabaseUrl:
+    Type: String
+    NoEcho: true
+  LambdaSecurityGroupId:
+    Type: AWS::EC2::SecurityGroup::Id
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet::Id
 Globals:
   Function:
     Timeout: 30
@@ -125,7 +134,14 @@ Resources:
             Ref: DocumentBucketName
           BEDROCK_REGION: ap-south-1
           EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
-          DATABASE_URL: postgresql://postgres:Jay_post26@ayd-postgres.czgweeg08232.ap-south-1.rds.amazonaws.com:5432/ayd_db
+          DATABASE_URL:
+            Ref: DatabaseUrl
+      VpcConfig:
+        SecurityGroupIds:
+        - Ref: LambdaSecurityGroupId
+        SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
       Events:
         IngestionQueueTrigger:
           Type: SQS
@@ -157,6 +173,47 @@ Resources:
           DOCUMENTS_BUCKET_NAME:
             Ref: DocumentBucketName
       ImageUri: ocrresultsworkerfunction:python312-v1
+  RetrievalTestFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      DockerContext: /home/jay_sharma/projects/ayd-workspace/workers/ingestion-worker
+      DockerTag: python312-v1
+      Dockerfile: Dockerfile
+      SamResourceId: RetrievalTestFunction
+    Properties:
+      PackageType: Image
+      FunctionName:
+        Fn::Sub: ayd-retrieval-test-${Environment}
+      Architectures:
+      - x86_64
+      ImageConfig:
+        Command:
+        - app.retrieval_test_handler.lambda_handler
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - AWSLambdaVPCAccessExecutionRole
+      - Statement:
+        - Sid: AllowBedrockEmbedding
+          Effect: Allow
+          Action:
+          - bedrock:InvokeModel
+          Resource: arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0
+      Environment:
+        Variables:
+          APP_ENV:
+            Ref: Environment
+          LOG_LEVEL: INFO
+          BEDROCK_REGION: ap-south-1
+          EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
+          DATABASE_URL:
+            Ref: DatabaseUrl
+      VpcConfig:
+        SecurityGroupIds:
+        - Ref: LambdaSecurityGroupId
+        SubnetIds:
+        - Ref: PrivateSubnetA
+        - Ref: PrivateSubnetB
+      ImageUri: ingestionworkerfunction:python312-v1
 Outputs:
   DocumentBucketName:
     Value:

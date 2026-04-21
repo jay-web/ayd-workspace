@@ -9,6 +9,13 @@ def _to_pgvector(vector: List[float]) -> str:
     return "[" + ",".join(str(value) for value in vector) + "]"
 
 
+import json
+import uuid
+from typing import Any, Dict, List
+
+import psycopg
+
+
 def insert_document_chunks(
     *,
     db_url: str,

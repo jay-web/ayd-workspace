@@ -45,6 +45,9 @@ def parse_sqs_body(body: str) -> Tuple[Optional[str], str, Dict[str, Any]]:
     raise ValueError("Unsupported SQS message body format")
 
 
+import os
+from typing import Any, Dict, Optional
+
 def process_document_message(
     bucket_name: Optional[str],
     storage_key: str,
@@ -67,56 +70,71 @@ def process_document_message(
         storageKey=storage_key,
         fileSizeBytes=len(file_bytes),
     )
+
     log_info("document.process.extract.start")
-
     pages = extract_pdf_pages(file_bytes)
-
     log_info(
-    "document.process.extract.done",
-    pageCount=len(pages),
-)
+        "document.process.extract.done",
+        pageCount=len(pages),
+    )
+
     chunks = chunk_document(pages)
-
     log_info(
-    "document.process.chunk.done",
-    chunkCount=len(chunks),
-)
+        "document.process.chunk.done",
+        chunkCount=len(chunks),
+    )
 
-    first_chunk = chunks[0]
-
-    log_info("document.process.embedding.start", chunkIndex=first_chunk["chunk_index"])
-    embedding = generate_embedding(first_chunk["content"])
-    log_info("document.process.embedding.done", embeddingLength=len(embedding))
-
-    first_chunk["embedding"] = embedding
-
-    if "page_start" not in first_chunk:
-        page_number = first_chunk.get("page_number")
-        first_chunk["page_start"] = page_number
-        first_chunk["page_end"] = page_number
+    if not chunks:
+        raise ValueError(f"No chunks generated for storage_key={storage_key}")
 
     document = find_document_by_storage_key(
-                db_url=os.environ["DATABASE_URL"],
-                storage_key=storage_key,
-                )
+        db_url=os.environ["DATABASE_URL"],
+        storage_key=storage_key,
+    )
 
     if not document:
         raise ValueError(f"Document not found for storage_key={storage_key}")
 
-    log_info("document.process.db_insert.start", chunkIndex=first_chunk["chunk_index"])
-    
+    enriched_chunks = []
+
+    for chunk in chunks:
+        chunk_index = chunk["chunk_index"]
+
+        log_info("document.process.embedding.start", chunkIndex=chunk_index)
+        embedding = generate_embedding(chunk["content"])
+        log_info(
+            "document.process.embedding.done",
+            chunkIndex=chunk_index,
+            embeddingLength=len(embedding),
+        )
+
+        chunk["embedding"] = embedding
+
+        if "page_start" not in chunk or "page_end" not in chunk:
+            page_number = chunk.get("page_number")
+            chunk["page_start"] = page_number
+            chunk["page_end"] = page_number
+
+        enriched_chunks.append(chunk)
+
+    log_info(
+        "document.process.db_insert.start",
+        chunkCount=len(enriched_chunks),
+    )
 
     insert_document_chunks(
         db_url=os.environ["DATABASE_URL"],
         document_id=str(document["document_id"]),
         workspace_id=str(document["workspace_id"]),
-        chunks=[first_chunk],
+        chunks=enriched_chunks,
     )
 
-    log_info("document.process.db_insert.done", chunkIndex=first_chunk["chunk_index"])
+    log_info(
+        "document.process.db_insert.done",
+        chunkCount=len(enriched_chunks),
+    )
 
-    print("Inserted chunk index:", first_chunk["chunk_index"])
-    print("Embedding length:", len(embedding))
+    print("Inserted chunks:", len(enriched_chunks))
 
 
 
