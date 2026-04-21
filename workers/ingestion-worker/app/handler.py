@@ -6,6 +6,9 @@ from urllib.parse import unquote_plus
 from app.s3_reader import read_s3_object
 from app.pdf_extractor import extract_pdf_pages
 from app.chunker import chunk_document
+from app.services.embeddings import generate_embedding
+from app.repositories.document_chunks import insert_document_chunks
+from app.repositories.documents import find_document_by_storage_key
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -37,7 +40,7 @@ def parse_sqs_body(body: str) -> Tuple[Optional[str], str, Dict[str, Any]]:
 
     # Case 2: manual/custom payload
     if isinstance(payload, dict) and payload.get("storageKey"):
-        return payload.get("bucket"), payload["storageKey"], payload
+        return payload.get("bucket_name"), payload["storageKey"], payload
 
     raise ValueError("Unsupported SQS message body format")
 
@@ -64,29 +67,57 @@ def process_document_message(
         storageKey=storage_key,
         fileSizeBytes=len(file_bytes),
     )
+    log_info("document.process.extract.start")
 
     pages = extract_pdf_pages(file_bytes)
+
+    log_info(
+    "document.process.extract.done",
+    pageCount=len(pages),
+)
     chunks = chunk_document(pages)
 
-    for chunk in chunks:
-        print("Chunk index:", chunk["chunk_index"])
-        print("Page number:", chunk["page_number"])
-        print("Token count:", chunk["token_count"])
-        print("Metadata:", chunk["metadata"])
-        print("Preview:", chunk["content"][:200])
-        print("----")
-
     log_info(
-        "document.process.pdf_extracted",
-        pageCount=len(pages),
-        sampleText=pages[0]["text"][:200] if pages else "",
+    "document.process.chunk.done",
+    chunkCount=len(chunks),
+)
+
+    first_chunk = chunks[0]
+
+    log_info("document.process.embedding.start", chunkIndex=first_chunk["chunk_index"])
+    embedding = generate_embedding(first_chunk["content"])
+    log_info("document.process.embedding.done", embeddingLength=len(embedding))
+
+    first_chunk["embedding"] = embedding
+
+    if "page_start" not in first_chunk:
+        page_number = first_chunk.get("page_number")
+        first_chunk["page_start"] = page_number
+        first_chunk["page_end"] = page_number
+
+    document = find_document_by_storage_key(
+                db_url=os.environ["DATABASE_URL"],
+                storage_key=storage_key,
+                )
+
+    if not document:
+        raise ValueError(f"Document not found for storage_key={storage_key}")
+
+    log_info("document.process.db_insert.start", chunkIndex=first_chunk["chunk_index"])
+    
+
+    insert_document_chunks(
+        db_url=os.environ["DATABASE_URL"],
+        document_id=str(document["document_id"]),
+        workspace_id=str(document["workspace_id"]),
+        chunks=[first_chunk],
     )
 
-    log_info(
-        "document.process.placeholder_complete",
-        bucketName=bucket_name,
-        storageKey=storage_key,
-    )
+    log_info("document.process.db_insert.done", chunkIndex=first_chunk["chunk_index"])
+
+    print("Inserted chunk index:", first_chunk["chunk_index"])
+    print("Embedding length:", len(embedding))
+
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:

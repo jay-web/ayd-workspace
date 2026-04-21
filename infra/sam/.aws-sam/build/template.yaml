@@ -29,7 +29,7 @@ Resources:
           Fn::GetAtt:
           - IngestionDlq
           - Arn
-        maxReceiveCount: 5
+        maxReceiveCount: 2
   IngestionQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -97,6 +97,7 @@ Resources:
       - x86_64
       Policies:
       - AWSLambdaSQSQueueExecutionRole
+      - AWSLambdaVPCAccessExecutionRole
       - Statement:
         - Sid: AllowReadDocumentsBucket
           Effect: Allow
@@ -104,6 +105,17 @@ Resources:
           - s3:GetObject
           Resource:
             Fn::Sub: arn:aws:s3:::${DocumentBucketName}/*
+        - Sid: AllowListDocumentsBucket
+          Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource:
+            Fn::Sub: arn:aws:s3:::${DocumentBucketName}
+        - Sid: AllowBedrockEmbedding
+          Effect: Allow
+          Action:
+          - bedrock:InvokeModel
+          Resource: arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0
       Environment:
         Variables:
           APP_ENV:
@@ -111,6 +123,9 @@ Resources:
           LOG_LEVEL: INFO
           DOCUMENTS_BUCKET_NAME:
             Ref: DocumentBucketName
+          BEDROCK_REGION: ap-south-1
+          EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
+          DATABASE_URL: postgresql://postgres:Jay_post26@ayd-postgres.czgweeg08232.ap-south-1.rds.amazonaws.com:5432/ayd_db
       Events:
         IngestionQueueTrigger:
           Type: SQS
