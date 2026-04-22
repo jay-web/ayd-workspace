@@ -1,3 +1,6 @@
+import WorkspaceChatContainer from "@/modules/documents/components/WorkspaceChatContainer";
+import { listDocumentsByWorkspace } from "@/modules/documents/document.repo";
+
 type WorkspaceChatPageProps = {
   params: Promise<{ workspaceId: string }>;
 };
@@ -6,13 +9,12 @@ export default async function WorkspaceChatPage({
   params,
 }: WorkspaceChatPageProps) {
   const { workspaceId } = await params;
+  const documents = await listDocumentsByWorkspace(workspaceId);
 
   return (
-    <section>
-      <h2 className="text-3xl font-bold text-slate-900 sm:text-5xl">Chat</h2>
-      <p className="mt-4 text-base text-slate-600 sm:text-2xl">
-        Chat for workspace: {workspaceId}
-      </p>
-    </section>
+    <WorkspaceChatContainer
+      workspaceId={workspaceId}
+      documents={documents.filter((doc) => doc.status === "READY")}
+    />
   );
 }

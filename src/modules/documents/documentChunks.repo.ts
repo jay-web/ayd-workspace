@@ -112,3 +112,39 @@ export async function replaceChunksForDocument(
     client.release();
   }
 }
+
+export async function searchSimilarChunks({
+  workspaceId,
+  documentId,
+  queryEmbedding,
+  limit = 5,
+}: {
+  workspaceId: string;
+  documentId: string;
+  queryEmbedding: string;
+  limit?: number;
+}) {
+  const result = await db.query(
+    `
+    SELECT
+      chunk_id AS "chunkId",
+      document_id AS "documentId",
+      workspace_id AS "workspaceId",
+      chunk_index AS "chunkIndex",
+      content,
+      page_start AS "pageStart",
+      page_end AS "pageEnd",
+      token_count AS "tokenCount",
+      metadata,
+      1 - (embedding <=> $1::vector) AS similarity
+    FROM document_chunks
+    WHERE workspace_id = $2
+      AND document_id = $3
+    ORDER BY embedding <=> $1::vector
+    LIMIT $4
+    `,
+    [queryEmbedding, workspaceId, documentId, limit]
+  );
+
+  return result.rows;
+}
