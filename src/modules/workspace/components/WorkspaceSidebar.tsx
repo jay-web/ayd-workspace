@@ -2,64 +2,95 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
   LayoutDashboard,
   FileText,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 export function WorkspaceSidebar({ workspaceId }: { workspaceId: string }) {
   const pathname = usePathname();
+  const [collapsed, setCollapsed] = useState(false);
 
   const baseClasses =
-    "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition";
+    "group flex items-center rounded-xl px-3 py-3 text-sm font-medium transition";
 
   function isActive(path: string) {
     return pathname === path;
   }
 
+  const navItems = [
+    {
+      href: `/workspaces/${workspaceId}`,
+      label: "Dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      href: `/workspaces/${workspaceId}/documents`,
+      label: "Documents",
+      icon: FileText,
+    },
+    {
+      href: `/workspaces/${workspaceId}/chat`,
+      label: "Chat",
+      icon: MessageSquare,
+    },
+  ];
+
   return (
-    <aside className="w-full rounded-[28px] border border-gray-200 bg-white px-4 py-6 shadow-sm md:w-[250px] md:border-b-0 md:border-r md:px-5 md:py-6">
-      <p className="mb-4 px-2 text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">
-        Workspace
-      </p>
+    <aside
+      className={`h-full rounded-[28px] border border-gray-200 bg-white py-4 shadow-sm transition-all duration-300 ${
+        collapsed ? "w-[84px] px-3" : "w-[250px] px-4 md:px-5"
+      }`}
+    >
+      <div
+        className={`mb-5 flex items-center ${
+          collapsed ? "justify-center" : "justify-between"
+        }`}
+      >
+        {!collapsed ? (
+          <p className="px-2 text-xs font-semibold uppercase tracking-[0.24em] text-gray-400">
+            Workspace
+          </p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+        </button>
+      </div>
 
       <nav className="flex flex-col gap-3">
-        <Link
-          href={`/workspaces/${workspaceId}`}
-          className={`${baseClasses} ${
-            isActive(`/workspaces/${workspaceId}`)
-              ? "bg-slate-900 text-white shadow-sm"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }`}
-        >
-          <LayoutDashboard size={16} />
-          Dashboard
-        </Link>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const active = isActive(item.href);
 
-        <Link
-          href={`/workspaces/${workspaceId}/documents`}
-          className={`${baseClasses} ${
-            isActive(`/workspaces/${workspaceId}/documents`)
-              ? "bg-slate-900 text-white shadow-sm"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }`}
-        >
-          <FileText size={16} />
-          Documents
-        </Link>
-
-        <Link
-          href={`/workspaces/${workspaceId}/chat`}
-          className={`${baseClasses} ${
-            isActive(`/workspaces/${workspaceId}/chat`)
-              ? "bg-slate-900 text-white shadow-sm"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
-          }`}
-        >
-          <MessageSquare size={16} />
-          Chat
-        </Link>
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={collapsed ? item.label : undefined}
+              className={`${baseClasses} ${
+                collapsed ? "justify-center" : "gap-3"
+              } ${
+                active
+                  ? "bg-slate-900 text-white shadow-sm"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+              }`}
+            >
+              <Icon size={18} className="shrink-0 gap-5" />
+              {!collapsed ? <span>{item.label}</span> : null}
+            </Link>
+          );
+        })}
       </nav>
     </aside>
   );

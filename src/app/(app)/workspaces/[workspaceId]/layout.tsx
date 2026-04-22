@@ -12,14 +12,15 @@ export default async function WorkspaceLayout({
   params,
 }: WorkspaceLayoutProps) {
   const { workspaceId } = await params;
+  
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="grid min-h-[calc(100vh-72px)] grid-cols-1 gap-6 md:grid-cols-[260px_1fr]">
-        <WorkspaceSidebar workspaceId={workspaceId} />
-
-        <main className="p-4 sm:p-6 md:p-8">{children}</main>
-      </div>
+  
+  <div className="min-h-screen bg-gray-50">
+    <div className="flex min-h-[calc(100vh-72px)] gap-6 p-0">
+      <WorkspaceSidebar workspaceId={workspaceId} />
+      <main className="min-w-0 flex-1 p-4 sm:p-6 md:p-8">{children}</main>
     </div>
+  </div>
   );
 }

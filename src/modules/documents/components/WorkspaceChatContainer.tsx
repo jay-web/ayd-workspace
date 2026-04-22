@@ -1,194 +1,155 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-type ChatDocument = {
-    documentId: string;
-    name: string;
-    status: "UPLOADING" | "PROCESSING" | "READY" | "FAILED";
+import { useEffect, useMemo, useRef, useState } from "react";
+import ChatDocumentsPanel from "./ChatDocumentsPanel";
+
+import ChatCitationsPanel from "./ChatCitationsPanel";
+import {
+  ChatCitation,
+  ChatDocument,
+  ChatDocumentView,
+  ChatMessage,
+} from "./chat.types";
+import ChatMainPanel from "./chatMainPanel";
+
+type WorkspaceChatContainerProps = {
+  workspaceId: string;
+  documents: ChatDocument[];
 };
 
 export default function WorkspaceChatContainer({
-    workspaceId,
-    documents,
-}: {
-    workspaceId: string;
-    documents: ChatDocument[];
-}) {
-    const [documentId, setDocumentId] = useState("");
-    const [question, setQuestion] = useState("");
-    const [messages, setMessages] = useState<
-        {
-            role: "user" | "assistant";
-            content: string;
-            citations?: {
-                chunkIndex: number;
-                pageStart: number | null;
-                pageEnd: number | null;
-                content: string;
-            }[];
-        }[]
-    >([]);
-    const [loading, setLoading] = useState(false);
-    const bottomRef = useRef<HTMLDivElement | null>(null);
-    const [selectedSource, setSelectedSource] = useState<{
-  label: string;
-  content: string;
-} | null>(null);
+  workspaceId,
+  documents,
+}: WorkspaceChatContainerProps) {
+  void workspaceId;
 
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, [messages, loading]);
+  const availableDocuments: ChatDocumentView[] = useMemo(() => {
+    return documents.map((doc, index) => ({
+      id: doc.documentId,
+      name: doc.name,
+      subtitle: "Ready for Q&A",
+      status: doc.status,
+      accent:
+        index % 3 === 0
+          ? "bg-emerald-50 text-emerald-600"
+          : index % 3 === 1
+            ? "bg-blue-50 text-blue-600"
+            : "bg-violet-50 text-violet-600",
+    }));
+  }, [documents]);
 
-    async function handleAsk() {
-        if (!documentId.trim() || !question.trim()) return;
+  const [selectedDocumentId, setSelectedDocumentId] = useState(
+    availableDocuments[0]?.id ?? "",
+  );
+  const [question, setQuestion] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedCitation, setSelectedCitation] = useState<ChatCitation | null>(null);
 
-        try {
-            setLoading(true);
-            setMessages((prev) => [
-                ...prev,
-                { role: "user", content: question.trim() },
-            ]);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-            const res = await fetch(`/api/v1/documents/${documentId}/ask`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ question }),
-            });
-
-            const data = await res.json();
-
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "assistant",
-                    content: data.answer ?? data.error ?? "No response",
-                    citations: data.citations ?? [],
-                },
-            ]);
-            setQuestion("");
-        } finally {
-            setLoading(false);
-        }
+  useEffect(() => {
+    if (!selectedDocumentId && availableDocuments[0]?.id) {
+      setSelectedDocumentId(availableDocuments[0].id);
     }
+  }, [availableDocuments, selectedDocumentId]);
 
-    return (
-        <section className="space-y-6">
-            <div>
-                <h2 className="text-3xl font-bold text-slate-900 sm:text-5xl">Chat</h2>
-                <p className="mt-4 text-base text-slate-600 sm:text-lg">
-                    Ask questions from documents in workspace: {workspaceId}
-                </p>
-            </div>
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
 
-            <div className="space-y-4 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                        Document
-                    </label>
-                    <select
-                        value={documentId}
-                        onChange={(e) => setDocumentId(e.target.value)}
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500 text-slate-900 bg-white"
-                    >
-                        <option value="">Select a document</option>
-                        {documents.map((doc) => (
-                            <option key={doc.documentId} value={doc.documentId}>
-                                {doc.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
+  const selectedDocument =
+    availableDocuments.find((doc) => doc.id === selectedDocumentId) ??
+    availableDocuments[0];
 
-                <div className="space-y-2">
-                    <label className="block text-sm font-medium text-slate-700">
-                        Question
-                    </label>
-                    <textarea
-                        value={question}
-                        onChange={(e) => setQuestion(e.target.value)}
-                        placeholder="Ask something about the document"
-                        rows={4}
-                        className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-500 text-slate-900 bg-white placeholder:text-slate-400"
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                                e.preventDefault();
-                                handleAsk();
-                            }
-                        }}
-                    />
-                </div>
+  const latestAssistantCitations =
+    [...messages]
+      .reverse()
+      .find((message) => message.role === "assistant" && message.citations?.length)
+      ?.citations ?? [];
 
-                <button
-                    type="button"
-                    disabled={loading || !documentId || !question.trim()}
-                    className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-                    onClick={handleAsk}
+  useEffect(() => {
+    if (latestAssistantCitations.length > 0) {
+      setSelectedCitation((prev) => {
+        if (prev) return prev;
+        return latestAssistantCitations[0];
+      });
+    } else {
+      setSelectedCitation(null);
+    }
+  }, [latestAssistantCitations]);
 
-                >
-                    {loading ? "Asking..." : "Ask"}
-                </button>
+  async function handleAsk(customQuestion?: string) {
+    const finalQuestion = (customQuestion ?? question).trim();
 
-                <div className="h-96 space-y-3 overflow-y-auto rounded-2xl bg-slate-50 p-3">
-                    {messages.map((message, index) => (
-                        <div
-                            key={index}
-                            className={`rounded-2xl px-4 py-3 text-sm ${message.role === "user"
-                                ? "ml-auto max-w-[80%] bg-slate-900 text-white"
-                                : "mr-auto max-w-[80%] bg-slate-100 text-slate-900"
-                                }`}
-                        >
-                            <div>{message.content}</div>
+    if (!selectedDocumentId.trim() || !finalQuestion) return;
 
-                            {message.role === "assistant" && message.citations?.length ? (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {message.citations.map((citation, i) => (
-                                        <button
-                                            type="button"
-                                            key={i}
-                                            onClick={() =>
-  setSelectedSource({
-    label:
-      citation.pageStart && citation.pageEnd
-        ? citation.pageStart === citation.pageEnd
-          ? `Page ${citation.pageStart}`
-          : `Pages ${citation.pageStart}-${citation.pageEnd}`
-        : "Source",
-    content: citation.content,
-  })
-}
-                                            className="rounded-full bg-white px-2 py-1 text-xs text-slate-600 transition hover:bg-slate-200"
-                                        >
-                                            {citation.pageStart && citation.pageEnd
-                                                ? citation.pageStart === citation.pageEnd
-                                                    ? `Page ${citation.pageStart}`
-                                                    : `Pages ${citation.pageStart}-${citation.pageEnd}`
-                                                : "Source"}
-                                        </button>
-                                    ))}
-                                </div>
-                            ) : null}
-                        </div>
-                    ))}
-                    {loading ? (
-                        <div className="mr-auto max-w-[80%] rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500">
-                            Thinking...
-                        </div>
-                    ) : null}
-                </div>
-                {selectedSource ? (
-  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-    <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-      {selectedSource.label}
-    </p>
-    <p className="mt-2 whitespace-pre-wrap text-sm text-slate-800">
-      {selectedSource.content}
-    </p>
-  </div>
-) : null}
-                <div ref={bottomRef} />
-            </div>
-        </section>
-    );
+    try {
+      setLoading(true);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "user",
+          content: finalQuestion,
+        },
+      ]);
+
+      if (!customQuestion) {
+        setQuestion("");
+      }
+
+      const res = await fetch(`/api/v1/documents/${selectedDocumentId}/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ question: finalQuestion }),
+      });
+
+      const data = await res.json();
+
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: data.answer ?? data.error ?? "No response",
+        citations: data.citations ?? [],
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+
+      if (assistantMessage.citations && assistantMessage.citations.length > 0) {
+        setSelectedCitation(assistantMessage.citations[0]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <section className="-ml-4 -mt-4 min-h-[calc(100vh-72px)] bg-[#f6f8f7] px-1.5 py-1.5 text-slate-900 sm:-ml-6 sm:-mt-6 sm:px-2 sm:py-2 md:-ml-8 md:-mt-8 md:px-2.5 md:py-2.5">
+      <div className="mx-auto flex min-h-[calc(100vh-76px)] max-w-none gap-1.5">
+        <ChatDocumentsPanel
+          documents={availableDocuments}
+          selectedDocumentId={selectedDocumentId}
+          onSelectDocument={setSelectedDocumentId}
+        />
+
+        <ChatMainPanel
+          selectedDocument={selectedDocument}
+          messages={messages}
+          loading={loading}
+          question={question}
+          onQuestionChange={setQuestion}
+          onAsk={handleAsk}
+          onSelectCitation={setSelectedCitation}
+          bottomRef={bottomRef}
+        />
+
+        <ChatCitationsPanel
+          citations={latestAssistantCitations}
+          selectedCitation={selectedCitation}
+        />
+      </div>
+    </section>
+  );
 }
