@@ -9,6 +9,7 @@ from app.chunker import chunk_document
 from app.services.embeddings import generate_embedding
 from app.repositories.document_chunks import insert_document_chunks
 from app.repositories.documents import find_document_by_storage_key
+from app.repositories.documents import update_document_status_by_storage_key
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -134,7 +135,11 @@ def process_document_message(
         chunkCount=len(enriched_chunks),
     )
 
-    print("Inserted chunks:", len(enriched_chunks))
+    update_document_status_by_storage_key(
+    db_url=os.environ["DATABASE_URL"],
+    storage_key=storage_key,
+    status="READY",
+)
 
 
 

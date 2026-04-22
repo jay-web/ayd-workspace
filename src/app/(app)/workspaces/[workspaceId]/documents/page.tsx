@@ -3,6 +3,7 @@ import { listDocumentsByWorkspace } from "@/modules/documents/document.repo";
 import { isUserMemberOfWorkspace } from "@/modules/workspace/workspace.repo";
 import { getServerSession } from "@/lib/auth/getServerSession";
 import { redirect } from "next/navigation";
+import DocumentsAutoRefresh from "@/modules/documents/components/DocumentsAutoRefresh";
 
 type DocumentListItem = {
   documentId: string;
@@ -58,7 +59,7 @@ export default async function WorkspaceDocumentsPage({
       </div>
 
       <DocumentsUploadCard workspaceId={workspaceId} />
-
+      <DocumentsAutoRefresh documents={documents} />
       <div className="rounded-3xl border border-gray-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
           <div>
