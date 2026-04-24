@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: ayd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ayd_user
+      POSTGRES_PASSWORD: ayd_password
+      POSTGRES_DB: ayd_local
+    ports:
+      - "5433:5432"
+    volumes:
+      - ayd_postgres_data:/var/lib/postgresql/data
+      - ./db:/app/db
+
+volumes:
+  ayd_postgres_data:
