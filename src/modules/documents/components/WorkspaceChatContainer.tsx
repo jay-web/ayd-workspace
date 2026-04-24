@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import ChatDocumentsPanel from "./ChatDocumentsPanel";
 import ChatCitationsPanel from "./ChatCitationsPanel";
 import {
@@ -10,6 +11,7 @@ import {
   ChatMessage,
 } from "./chat.types";
 import ChatMainPanel from "./chatMainPanel";
+import DocumentsAutoRefresh from "./DocumentsAutoRefresh";
 
 type WorkspaceChatContainerProps = {
   workspaceId: string;
@@ -20,7 +22,7 @@ export default function WorkspaceChatContainer({
   workspaceId,
   documents,
 }: WorkspaceChatContainerProps) {
-  void workspaceId;
+  const router = useRouter();
 
   const availableDocuments: ChatDocumentView[] = useMemo(() => {
     function getSubtitle(status: ChatDocument["status"]) {
@@ -59,12 +61,15 @@ export default function WorkspaceChatContainer({
       ""
     );
   });
+
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedCitation, setSelectedCitation] = useState<ChatCitation | null>(null);
+  const [selectedCitation, setSelectedCitation] =
+    useState<ChatCitation | null>(null);
   const [citationsCollapsed, setCitationsCollapsed] = useState(true);
   const [scrollToTopToken, setScrollToTopToken] = useState("");
+
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -85,25 +90,31 @@ export default function WorkspaceChatContainer({
     () =>
       [...messages]
         .reverse()
-        .find((message) => message.role === "assistant" && message.citations?.length)
-        ?.citations ?? [],
+        .find(
+          (message) =>
+            message.role === "assistant" && message.citations?.length,
+        )?.citations ?? [],
     [messages],
   );
 
   useEffect(() => {
-  if (latestAssistantCitations.length === 0) {
-    setSelectedCitation(null);
-    setCitationsCollapsed(true);
-  }
-}, [latestAssistantCitations]);
+    if (latestAssistantCitations.length === 0) {
+      setSelectedCitation(null);
+      setCitationsCollapsed(true);
+    }
+  }, [latestAssistantCitations]);
 
- function handleSelectCitation(citation: ChatCitation) {
-  setSelectedCitation(citation);
-  setCitationsCollapsed(false);
-  setScrollToTopToken(
-    `${citation.chunkIndex}-${citation.pageStart}-${citation.pageEnd}-${Date.now()}`
-  );
-}
+  function handleSelectCitation(citation: ChatCitation) {
+    setSelectedCitation(citation);
+    setCitationsCollapsed(false);
+    setScrollToTopToken(
+      `${citation.chunkIndex}-${citation.pageStart}-${citation.pageEnd}-${Date.now()}`,
+    );
+  }
+
+  async function handleDocumentsChanged() {
+    router.refresh();
+  }
 
   async function handleAsk(customQuestion?: string) {
     const finalQuestion = (customQuestion ?? question).trim();
@@ -148,8 +159,6 @@ export default function WorkspaceChatContainer({
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
-
-      
     } finally {
       setLoading(false);
     }
@@ -157,11 +166,14 @@ export default function WorkspaceChatContainer({
 
   return (
     <section className="h-full min-h-0 overflow-hidden bg-[#f6f8f7] text-slate-900">
+       <DocumentsAutoRefresh documents={availableDocuments} />
       <div className="flex h-full min-h-0 max-w-none gap-1.5">
         <ChatDocumentsPanel
+          workspaceId={workspaceId}
           documents={availableDocuments}
           selectedDocumentId={selectedDocumentId}
           onSelectDocument={setSelectedDocumentId}
+          onDocumentsChanged={handleDocumentsChanged}
         />
 
         <ChatMainPanel
@@ -176,12 +188,12 @@ export default function WorkspaceChatContainer({
         />
 
         <ChatCitationsPanel
-  citations={latestAssistantCitations}
-  selectedCitation={selectedCitation}
-  collapsed={citationsCollapsed}
-  onCollapsedChange={setCitationsCollapsed}
-  scrollToTopToken={scrollToTopToken}
-/>
+          citations={latestAssistantCitations}
+          selectedCitation={selectedCitation}
+          collapsed={citationsCollapsed}
+          onCollapsedChange={setCitationsCollapsed}
+          scrollToTopToken={scrollToTopToken}
+        />
       </div>
     </section>
   );

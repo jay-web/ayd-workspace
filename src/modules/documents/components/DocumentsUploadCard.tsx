@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { useDocumentUpload } from "./useDocumentUpload";
 
 type DocumentsUploadCardProps = {
   workspaceId: string;
@@ -12,126 +12,22 @@ export default function DocumentsUploadCard({
   workspaceId,
 }: DocumentsUploadCardProps) {
   const router = useRouter();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
 
-  function handleOpenPicker() {
-    inputRef.current?.click();
-  }
-
-  function uploadFileToS3(uploadUrl: string, file: File) {
-    return new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-
-      xhr.open("PUT", uploadUrl);
-
-      xhr.setRequestHeader(
-        "Content-Type",
-        file.type || "application/octet-stream"
-      );
-
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-
-        const percent = Math.round((event.loaded / event.total) * 100);
-        setUploadProgress(percent);
-      };
-
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-          return;
-        }
-
-        reject(new Error("Failed to upload file to S3"));
-      };
-
-      xhr.onerror = () => {
-        reject(new Error("Failed to upload file to S3"));
-      };
-
-      xhr.send(file);
-    });
-  }
-
-  async function createDocumentMetadata(file: File) {
-    setUploading(true);
-
-    try {
-      const res = await fetch(`/api/v1/workspaces/${workspaceId}/documents`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: file.name,
-          originalFileName: file.name,
-          mimeType: file.type || "application/octet-stream",
-          sizeBytes: file.size,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to create document");
-      }
-
-      const data = await res.json();
-      const { uploadUrl } = data;
-
-      setUploadProgress(0);
-      await uploadFileToS3(uploadUrl, file);
-      setUploadProgress(100);
-
-      await fetch(`/api/v1/documents/${data.document.documentId}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          status: "PROCESSING",
-        }),
-      });
-
-      await fetch(`/api/v1/documents/${data.document.documentId}/complete-upload`, {
-  method: "POST",
-});
-
-      toast.success("Document uploaded successfully");
-      setSelectedFile(null);
-      setUploadProgress(0);
-
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-
+  const {
+    inputRef,
+    selectedFile,
+    uploading,
+    uploadProgress,
+    openFilePicker,
+    uploadDocument,
+    handleFileChange,
+  } = useDocumentUpload({
+    workspaceId,
+    onUploaded: () => {
       router.refresh();
-    } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
-
-      toast.error(message);
-    } finally {
-      setUploading(false);
-      setIsDragging(false);
-      setUploadProgress(0);
-    }
-  }
-
-  async function handleSelectedFile(file: File | null) {
-    if (!file) return;
-
-    setSelectedFile(file);
-    await createDocumentMetadata(file);
-  }
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null;
-    await handleSelectedFile(file);
-  }
+    },
+  });
 
   function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
@@ -153,7 +49,7 @@ export default function DocumentsUploadCard({
     if (uploading) return;
 
     const file = e.dataTransfer.files?.[0] ?? null;
-    await handleSelectedFile(file);
+    await uploadDocument(file);
   }
 
   return (
@@ -177,14 +73,15 @@ export default function DocumentsUploadCard({
       </div>
 
       <div
-        onClick={handleOpenPicker}
+        onClick={openFilePicker}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group cursor-pointer rounded-[28px] border border-dashed px-6 py-12 text-center transition ${isDragging
+        className={`group cursor-pointer rounded-[28px] border border-dashed px-6 py-12 text-center transition ${
+          isDragging
             ? "border-gray-500 bg-gray-100"
             : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
-          }`}
+        }`}
       >
         <p className="text-sm font-medium text-gray-700">
           {isDragging ? "Drop file here" : "Drag and drop files here"}

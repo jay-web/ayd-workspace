@@ -1,14 +1,25 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, FileText, Search, Upload } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Search,
+  Upload,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { ChatDocumentView } from "./chat.types";
+import { useDocumentUpload } from "./useDocumentUpload";
 
 type ChatDocumentsPanelProps = {
+  workspaceId: string;
   documents: ChatDocumentView[];
   selectedDocumentId: string;
   onSelectDocument: (id: string) => void;
+  onDocumentsChanged?: (documentId?: string) => void | Promise<void>;
 };
+
+type DocumentFilter = "ALL" | "READY" | "PROCESSING" | "FAILED";
 
 function getStatusClasses(status: ChatDocumentView["status"]) {
   switch (status) {
@@ -40,16 +51,55 @@ function getStatusDotColor(status: ChatDocumentView["status"]) {
   }
 }
 
-type DocumentFilter = "ALL" | "READY" | "PROCESSING" | "FAILED";
+function getStatusLabel(status: ChatDocumentView["status"]) {
+  switch (status) {
+    case "PROCESSING":
+      return "Processing now";
+    case "UPLOADING":
+      return "Uploading now";
+    default:
+      return status;
+  }
+}
+
+function isActiveStatus(status: ChatDocumentView["status"]) {
+  return status === "PROCESSING" || status === "UPLOADING";
+}
+
+function ActiveStatusDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5 leading-none">
+      <span className="h-1.5 w-1.5 rounded-full bg-current animate-[bounce_1s_infinite]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-current animate-[bounce_1s_infinite_0.15s]" />
+      <span className="h-1.5 w-1.5 rounded-full bg-current animate-[bounce_1s_infinite_0.3s]" />
+    </span>
+  );
+}
 
 export default function ChatDocumentsPanel({
+  workspaceId,
   documents,
   selectedDocumentId,
   onSelectDocument,
+  onDocumentsChanged,
 }: ChatDocumentsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<DocumentFilter>("ALL");
+
+  const {
+    inputRef,
+    uploading,
+    uploadProgress,
+    openFilePicker,
+    handleFileChange,
+  } = useDocumentUpload({
+    workspaceId,
+    onUploaded: async (documentId) => {
+      await onDocumentsChanged?.(documentId);
+      onSelectDocument(documentId);
+    },
+  });
 
   const filteredDocuments = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -58,6 +108,7 @@ export default function ChatDocumentsPanel({
       const matchesSearch =
         normalizedSearch.length === 0 ||
         doc.name.toLowerCase().includes(normalizedSearch);
+
       const matchesStatus =
         statusFilter === "ALL" || doc.status === statusFilter;
 
@@ -71,9 +122,20 @@ export default function ChatDocumentsPanel({
         collapsed ? "w-16" : "w-[320px]"
       }`}
     >
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.txt"
+        className="hidden"
+        onChange={handleFileChange}
+        disabled={uploading}
+      />
+
       <div className="shrink-0">
         <div
-          className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-2"}`}
+          className={`flex items-center ${
+            collapsed ? "justify-center" : "justify-between gap-2"
+          }`}
         >
           {!collapsed ? (
             <h2 className="text-[15px] font-semibold tracking-[-0.02em] text-slate-900">
@@ -85,10 +147,12 @@ export default function ChatDocumentsPanel({
             {!collapsed ? (
               <button
                 type="button"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-2.5 py-2 text-[12px] font-medium text-emerald-700 transition hover:bg-emerald-50"
+                onClick={openFilePicker}
+                disabled={uploading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-white px-2.5 py-2 text-[12px] font-medium text-emerald-700 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Upload className="h-3.5 w-3.5" />
-                Upload
+                {uploading ? `${uploadProgress}%` : "Upload"}
               </button>
             ) : null}
 
@@ -96,8 +160,16 @@ export default function ChatDocumentsPanel({
               type="button"
               onClick={() => setCollapsed((prev) => !prev)}
               className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-              aria-label={collapsed ? "Expand documents sidebar" : "Collapse documents sidebar"}
-              title={collapsed ? "Expand documents sidebar" : "Collapse documents sidebar"}
+              aria-label={
+                collapsed
+                  ? "Expand documents sidebar"
+                  : "Collapse documents sidebar"
+              }
+              title={
+                collapsed
+                  ? "Expand documents sidebar"
+                  : "Collapse documents sidebar"
+              }
             >
               {collapsed ? (
                 <ChevronRight className="h-4 w-4" />
@@ -123,7 +195,9 @@ export default function ChatDocumentsPanel({
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as DocumentFilter)}
+              onChange={(e) =>
+                setStatusFilter(e.target.value as DocumentFilter)
+              }
               aria-label="Filter documents by status"
               className="h-9 rounded-xl border border-slate-200 bg-white px-2.5 text-[12px] font-medium text-slate-600 outline-none transition focus:border-emerald-300"
             >
@@ -136,11 +210,17 @@ export default function ChatDocumentsPanel({
         ) : null}
       </div>
 
-      <div className={`mt-2.5 min-h-0 flex-1 overflow-y-auto ${collapsed ? "" : "pr-1"}`}>
+      <div
+        className={`ayd-scrollbar mt-2.5 min-h-0 flex-1 overflow-y-auto ${
+          collapsed ? "" : "pr-1"
+        }`}
+      >
         <div className="space-y-1.5">
           {filteredDocuments.length === 0 && !collapsed ? (
             <div className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center">
-              <p className="text-[12px] font-medium text-slate-700">No documents found</p>
+              <p className="text-[12px] font-medium text-slate-700">
+                No documents found
+              </p>
               <p className="mt-1 text-[11px] text-slate-500">
                 Try a different search or status filter.
               </p>
@@ -149,6 +229,7 @@ export default function ChatDocumentsPanel({
 
           {filteredDocuments.map((doc) => {
             const isSelected = doc.id === selectedDocumentId;
+            const isActive = isActiveStatus(doc.status);
 
             return (
               <button
@@ -167,7 +248,11 @@ export default function ChatDocumentsPanel({
                 }`}
               >
                 <div
-                  className={`flex ${collapsed ? "items-center justify-center px-2 py-2" : "items-start gap-2 px-2.5 py-2"}`}
+                  className={`flex ${
+                    collapsed
+                      ? "items-center justify-center px-2 py-2"
+                      : "items-start gap-2 px-2.5 py-2"
+                  }`}
                 >
                   <div className="relative">
                     <div
@@ -175,11 +260,13 @@ export default function ChatDocumentsPanel({
                     >
                       <FileText className="h-4 w-4" />
                     </div>
-                    {/* Status indicator dot */}
+
                     <div
-                      className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-white ${getStatusDotColor(doc.status)}`}
-                      title={doc.status}
-                      aria-label={`Status: ${doc.status}`}
+                      className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-white ${getStatusDotColor(
+                        doc.status,
+                      )} ${isActive ? "animate-pulse" : ""}`}
+                      title={getStatusLabel(doc.status)}
+                      aria-label={`Status: ${getStatusLabel(doc.status)}`}
                     />
                   </div>
 
@@ -191,14 +278,29 @@ export default function ChatDocumentsPanel({
                       >
                         {doc.name}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-slate-500">{doc.subtitle}</p>
-                      <div className="mt-1.5">
+
+                      {!isActive ? (
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {doc.subtitle}
+                        </p>
+                      ) : null}
+
+                      <div className={isActive ? "mt-1" : "mt-1.5"}>
                         <span
-                          className={`inline-flex rounded-full px-1.5 py-0.5 text-[9px] font-semibold tracking-[0.05em] ${getStatusClasses(
+                          className={`inline-flex rounded-full px-2 py-1 text-[9px] font-semibold tracking-[0.05em] ${getStatusClasses(
                             doc.status,
                           )}`}
                         >
-                          {doc.status}
+                          <span className="inline-flex items-center gap-1.5 leading-none">
+                            {isActive ? (
+                              <>
+                                <span>{getStatusLabel(doc.status)}</span>
+                                <ActiveStatusDots />
+                              </>
+                            ) : (
+                              getStatusLabel(doc.status)
+                            )}
+                          </span>
                         </span>
                       </div>
                     </div>
