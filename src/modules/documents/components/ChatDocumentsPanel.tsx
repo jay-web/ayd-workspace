@@ -25,6 +25,21 @@ function getStatusClasses(status: ChatDocumentView["status"]) {
   }
 }
 
+function getStatusDotColor(status: ChatDocumentView["status"]) {
+  switch (status) {
+    case "READY":
+      return "bg-emerald-500";
+    case "PROCESSING":
+      return "bg-amber-400";
+    case "UPLOADING":
+      return "bg-sky-400";
+    case "FAILED":
+      return "bg-rose-500";
+    default:
+      return "bg-slate-400";
+  }
+}
+
 type DocumentFilter = "ALL" | "READY" | "PROCESSING" | "FAILED";
 
 export default function ChatDocumentsPanel({
@@ -140,20 +155,32 @@ export default function ChatDocumentsPanel({
                 key={doc.id}
                 type="button"
                 onClick={() => onSelectDocument(doc.id)}
+                title={doc.name}
                 className={`w-full rounded-[14px] border text-left transition ${
                   isSelected
-                    ? "border-emerald-200 bg-emerald-50/50 shadow-[0_8px_18px_rgba(16,185,129,0.06)]"
-                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
+                    ? collapsed
+                      ? "border-emerald-400 bg-emerald-100/40 shadow-[0_4px_12px_rgba(16,185,129,0.1)]"
+                      : "border-emerald-200 bg-emerald-50/50 shadow-[0_8px_18px_rgba(16,185,129,0.06)]"
+                    : collapsed
+                      ? "border-slate-200 bg-slate-50/40 hover:border-slate-300 hover:bg-slate-100/50"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/60"
                 }`}
-                title={doc.name}
               >
                 <div
                   className={`flex ${collapsed ? "items-center justify-center px-2 py-2" : "items-start gap-2 px-2.5 py-2"}`}
                 >
-                  <div
-                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${doc.accent}`}
-                  >
-                    <FileText className="h-4 w-4" />
+                  <div className="relative">
+                    <div
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] ${doc.accent}`}
+                    >
+                      <FileText className="h-4 w-4" />
+                    </div>
+                    {/* Status indicator dot */}
+                    <div
+                      className={`absolute bottom-0 right-0 h-2 w-2 rounded-full border border-white ${getStatusDotColor(doc.status)}`}
+                      title={doc.status}
+                      aria-label={`Status: ${doc.status}`}
+                    />
                   </div>
 
                   {!collapsed ? (
