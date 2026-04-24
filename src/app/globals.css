@@ -52,3 +52,27 @@ body {
     transform: translateY(0) scale(1);
   }
 }
+
+/* Thin scrollbar utility class for better visual hierarchy */
+.ayd-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.ayd-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ayd-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ayd-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.28);
+  border-radius: 999px;
+}
+
+.ayd-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.42);
+}

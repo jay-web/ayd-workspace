@@ -67,7 +67,7 @@ export default function ChatDocumentsPanel({
 
   return (
     <aside
-      className={`flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-[20px] border border-slate-200/80 bg-white p-3 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-[width] duration-200 ${
+      className={`flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-[20px] border border-slate-200/80 bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-[width] duration-200 ${
         collapsed ? "w-16" : "w-[320px]"
       }`}
     >
@@ -136,7 +136,7 @@ export default function ChatDocumentsPanel({
         ) : null}
       </div>
 
-      <div className={`mt-3 min-h-0 flex-1 overflow-y-auto ${collapsed ? "" : "pr-1"}`}>
+      <div className={`mt-2.5 min-h-0 flex-1 overflow-y-auto ${collapsed ? "" : "pr-1"}`}>
         <div className="space-y-1.5">
           {filteredDocuments.length === 0 && !collapsed ? (
             <div className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50/60 px-3 py-4 text-center">
@@ -211,7 +211,7 @@ export default function ChatDocumentsPanel({
       </div>
 
       {!collapsed ? (
-        <p className="shrink-0 pt-3 text-[12px] text-slate-500">
+        <p className="shrink-0 pt-2 text-[12px] text-slate-500">
           Showing {filteredDocuments.length} of {documents.length} documents
         </p>
       ) : null}

@@ -67,7 +67,7 @@ export default function ChatMainPanel({
   const canAsk = selectedDocument?.status === "READY";
 
   return (
-    <main className="flex h-full min-w-0 flex-1 flex-col rounded-[22px] border border-slate-200/80 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+    <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
       <div className="shrink-0">
        <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -120,7 +120,7 @@ export default function ChatMainPanel({
 </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-0.5 pb-3">
+      <div className="ayd-scrollbar min-h-0 flex-1 overflow-y-auto px-0.5 pb-2">
         {messages.length === 0 ? (
           <div className="space-y-3">
           <div className="rounded-[18px] border border-slate-200 bg-slate-50/60 px-4 py-3">
@@ -204,8 +204,8 @@ export default function ChatMainPanel({
         )}
       </div>
 
-      <div className="shrink-0 border-t border-slate-100 pt-3">
-        <div className="flex items-center gap-3 rounded-[18px] border border-slate-200 bg-white px-3 py-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.03)]">
+      <div className="shrink-0 border-t border-slate-100/80 pt-2.5">
+        <div className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
           <button
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
@@ -245,7 +245,7 @@ export default function ChatMainPanel({
           </button>
         </div>
 
-        <div className="mt-2 flex justify-end pr-1">
+        <div className="mt-1.5 flex justify-end pr-1">
           <p className="text-[11px] text-slate-500">
             Enter to send • Shift + Enter for new line
           </p>

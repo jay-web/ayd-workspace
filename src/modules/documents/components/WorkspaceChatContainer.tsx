@@ -156,8 +156,8 @@ export default function WorkspaceChatContainer({
   }
 
   return (
-    <section className="-ml-4 -mt-4 h-[calc(100vh-72px)] min-h-0 overflow-hidden bg-[#f6f8f7] px-1.5 py-1.5 text-slate-900 sm:-ml-6 sm:-mt-6 sm:px-2 sm:py-2 md:-ml-8 md:-mt-8 md:px-2.5 md:py-2.5">
-      <div className="mx-auto flex h-full min-h-0 max-w-none gap-1.5">
+    <section className="h-full min-h-0 overflow-hidden bg-[#f6f8f7] text-slate-900">
+      <div className="flex h-full min-h-0 max-w-none gap-1.5">
         <ChatDocumentsPanel
           documents={availableDocuments}
           selectedDocumentId={selectedDocumentId}
