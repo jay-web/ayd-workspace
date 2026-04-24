@@ -64,6 +64,8 @@ export default function ChatMainPanel({
   onSelectCitation,
   bottomRef,
 }: ChatMainPanelProps) {
+  const canAsk = selectedDocument?.status === "READY";
+
   return (
     <main className="flex h-full min-w-0 flex-1 flex-col rounded-[22px] border border-slate-200/80 bg-white p-3 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
       <div className="shrink-0">
@@ -87,7 +89,11 @@ export default function ChatMainPanel({
                 </span>
               </div>
               <p className="mt-0.5 text-[12px] text-slate-500">
-                {selectedDocument ? "Ready for grounded Q&A" : "Choose a document first"}
+                {selectedDocument
+                  ? canAsk
+                    ? "Ready for grounded Q&A"
+                    : "This document is not ready for chat yet"
+                  : "Choose a document first"}
               </p>
             </div>
           </div>
@@ -132,7 +138,7 @@ export default function ChatMainPanel({
                 <button
                   key={item}
                   type="button"
-                  disabled={!selectedDocument || loading}
+                  disabled={!selectedDocument || loading || !canAsk}
                   onClick={() => onAsk(item)}
                   className="rounded-[14px] border border-slate-200 bg-white px-4 py-3 text-left text-[13px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -219,9 +225,11 @@ export default function ChatMainPanel({
               }
             }}
             placeholder={
-              selectedDocument
-                ? "Ask something about this document..."
-                : "Select a document first..."
+              !selectedDocument
+                ? "Select a document first..."
+                : canAsk
+                  ? "Ask something about this document..."
+                  : "This document is still unavailable for chat..."
             }
             className="max-h-24 min-h-[24px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-slate-700 outline-none placeholder:text-slate-400"
           />
@@ -229,7 +237,7 @@ export default function ChatMainPanel({
           <button
             type="button"
             onClick={() => onAsk()}
-            disabled={loading || !selectedDocument || !question.trim()}
+            disabled={loading || !selectedDocument || !question.trim() || !canAsk}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-emerald-700 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_12px_22px_rgba(5,150,105,0.2)] transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Ask AYD

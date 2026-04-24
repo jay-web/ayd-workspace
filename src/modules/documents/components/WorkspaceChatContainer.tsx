@@ -23,10 +23,25 @@ export default function WorkspaceChatContainer({
   void workspaceId;
 
   const availableDocuments: ChatDocumentView[] = useMemo(() => {
+    function getSubtitle(status: ChatDocument["status"]) {
+      switch (status) {
+        case "READY":
+          return "Ready for Q&A";
+        case "PROCESSING":
+          return "Processing now";
+        case "FAILED":
+          return "Processing failed";
+        case "UPLOADING":
+          return "Upload in progress";
+        default:
+          return "Unavailable";
+      }
+    }
+
     return documents.map((doc, index) => ({
       id: doc.documentId,
       name: doc.name,
-      subtitle: "Ready for Q&A",
+      subtitle: getSubtitle(doc.status),
       status: doc.status,
       accent:
         index % 3 === 0
@@ -37,9 +52,13 @@ export default function WorkspaceChatContainer({
     }));
   }, [documents]);
 
-  const [selectedDocumentId, setSelectedDocumentId] = useState(
-    availableDocuments[0]?.id ?? "",
-  );
+  const [selectedDocumentId, setSelectedDocumentId] = useState(() => {
+    return (
+      availableDocuments.find((doc) => doc.status === "READY")?.id ??
+      availableDocuments[0]?.id ??
+      ""
+    );
+  });
   const [question, setQuestion] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(false);
@@ -62,11 +81,14 @@ export default function WorkspaceChatContainer({
     availableDocuments.find((doc) => doc.id === selectedDocumentId) ??
     availableDocuments[0];
 
-  const latestAssistantCitations =
-    [...messages]
-      .reverse()
-      .find((message) => message.role === "assistant" && message.citations?.length)
-      ?.citations ?? [];
+  const latestAssistantCitations = useMemo(
+    () =>
+      [...messages]
+        .reverse()
+        .find((message) => message.role === "assistant" && message.citations?.length)
+        ?.citations ?? [],
+    [messages],
+  );
 
   useEffect(() => {
   if (latestAssistantCitations.length === 0) {
@@ -86,7 +108,13 @@ export default function WorkspaceChatContainer({
   async function handleAsk(customQuestion?: string) {
     const finalQuestion = (customQuestion ?? question).trim();
 
-    if (!selectedDocumentId.trim() || !finalQuestion) return;
+    if (
+      !selectedDocumentId.trim() ||
+      !finalQuestion ||
+      selectedDocument?.status !== "READY"
+    ) {
+      return;
+    }
 
     try {
       setLoading(true);
@@ -128,8 +156,8 @@ export default function WorkspaceChatContainer({
   }
 
   return (
-    <section className="-ml-4 -mt-4 h-[calc(100vh-72px)] overflow-hidden bg-[#f6f8f7] px-1.5 py-1.5 text-slate-900 sm:-ml-6 sm:-mt-6 sm:px-2 sm:py-2 md:-ml-8 md:-mt-8 md:px-2.5 md:py-2.5">
-      <div className="mx-auto flex h-full max-w-none gap-1.5">
+    <section className="-ml-4 -mt-4 h-[calc(100vh-72px)] min-h-0 overflow-hidden bg-[#f6f8f7] px-1.5 py-1.5 text-slate-900 sm:-ml-6 sm:-mt-6 sm:px-2 sm:py-2 md:-ml-8 md:-mt-8 md:px-2.5 md:py-2.5">
+      <div className="mx-auto flex h-full min-h-0 max-w-none gap-1.5">
         <ChatDocumentsPanel
           documents={availableDocuments}
           selectedDocumentId={selectedDocumentId}

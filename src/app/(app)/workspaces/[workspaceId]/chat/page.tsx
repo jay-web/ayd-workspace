@@ -14,7 +14,7 @@ export default async function WorkspaceChatPage({
   return (
     <WorkspaceChatContainer
       workspaceId={workspaceId}
-      documents={documents.filter((doc) => doc.status === "READY")}
+      documents={documents}
     />
   );
 }
