@@ -75,3 +75,20 @@ export type CreateDocumentChunkInput = {
   tokenCount?: number | null;
   metadata?: Record<string, unknown>;
 };
+
+// For DYNAMO DB
+export type DocumentItem = {
+  documentId: string;
+  workspaceId: string;
+  name: string;
+  originalFileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  storageKey: string;
+  uploadedBy: string;
+  status: DocumentStatus;
+  errorMessage: string | null;
+  ingestedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
