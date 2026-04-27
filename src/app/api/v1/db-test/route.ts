@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db/postgres";
+import {
+  createWorkspace,
+  listWorkspacesForUser,
+} from "@/modules/workspace/workspace.dynamo.repo";
 
 export async function GET() {
-  const result = await db.query(`
-    SELECT id, name, owner_user_id, created_at
-    FROM workspaces
-    ORDER BY created_at DESC
-  `);
+  const userId = "test-user-1";
+
+  const workspace = await createWorkspace({
+    name: "DynamoDB Test Workspace",
+    ownerUserId: userId,
+  });
+
+  const workspaces = await listWorkspacesForUser(userId);
 
   return NextResponse.json({
     ok: true,
-    workspaces: result.rows,
+    message: "DynamoDB connection working",
+    createdWorkspace: workspace,
+    workspaces,
   });
 }

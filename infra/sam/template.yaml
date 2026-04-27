@@ -11,19 +11,6 @@ Parameters:
     Type: String
     Default: ayd-workspace-jay-docs
 
-  DatabaseUrl:
-    Type: String
-    NoEcho: true
-
-  LambdaSecurityGroupId:
-    Type: AWS::EC2::SecurityGroup::Id
-
-  PrivateSubnetA:
-    Type: AWS::EC2::Subnet::Id
-
-  PrivateSubnetB:
-    Type: AWS::EC2::Subnet::Id
-
 Globals:
   Function:
     Timeout: 30
@@ -90,6 +77,70 @@ Resources:
                   - Name: suffix
                     Value: .pdf
 
+  WorkspacesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "ayd-workspaces-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: workspaceId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: workspaceId
+          KeyType: HASH
+
+  WorkspaceMembersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "ayd-workspace-members-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: workspaceId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: joinedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: workspaceId
+          KeyType: HASH
+        - AttributeName: userId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: UserWorkspacesIndex
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: joinedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  DocumentsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "ayd-documents-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: workspaceId
+          AttributeType: S
+        - AttributeName: documentId
+          AttributeType: S
+        - AttributeName: storageKey
+          AttributeType: S
+      KeySchema:
+        - AttributeName: workspaceId
+          KeyType: HASH
+        - AttributeName: documentId
+          KeyType: RANGE
+      GlobalSecondaryIndexes:
+        - IndexName: DocumentStorageKeyIndex
+          KeySchema:
+            - AttributeName: storageKey
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
   IngestionWorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -103,7 +154,6 @@ Resources:
         - x86_64
       Policies:
         - AWSLambdaSQSQueueExecutionRole
-        - AWSLambdaVPCAccessExecutionRole
         - Statement:
             - Sid: AllowReadDocumentsBucket
               Effect: Allow
@@ -123,6 +173,22 @@ Resources:
                 - bedrock:InvokeModel
               Resource: arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0
 
+            - Sid: AllowAydDynamoDbAccess
+              Effect: Allow
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
+                - dynamodb:BatchWriteItem
+              Resource:
+                - !GetAtt WorkspacesTable.Arn
+                - !GetAtt WorkspaceMembersTable.Arn
+                - !GetAtt DocumentsTable.Arn
+                - !Sub "${WorkspaceMembersTable.Arn}/index/UserWorkspacesIndex"
+                - !Sub "${DocumentsTable.Arn}/index/DocumentStorageKeyIndex"
+
       Environment:
         Variables:
           APP_ENV: !Ref Environment
@@ -130,14 +196,12 @@ Resources:
           DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
           BEDROCK_REGION: ap-south-1
           EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
-          DATABASE_URL: !Ref DatabaseUrl
 
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref LambdaSecurityGroupId
-        SubnetIds:
-          - !Ref PrivateSubnetA
-          - !Ref PrivateSubnetB
+          WORKSPACES_TABLE_NAME: !Ref WorkspacesTable
+          WORKSPACE_MEMBERS_TABLE_NAME: !Ref WorkspaceMembersTable
+          DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
+          USER_WORKSPACES_INDEX_NAME: UserWorkspacesIndex
+          DOCUMENT_STORAGE_KEY_INDEX_NAME: DocumentStorageKeyIndex
 
       Events:
         IngestionQueueTrigger:
@@ -163,43 +227,6 @@ Resources:
           LOG_LEVEL: INFO
           DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
 
-  RetrievalTestFunction:
-    Type: AWS::Serverless::Function
-    Metadata:
-      Dockerfile: Dockerfile
-      DockerContext: ../../workers/ingestion-worker
-      DockerTag: python312-v1
-    Properties:
-      PackageType: Image
-      FunctionName: !Sub "ayd-retrieval-test-${Environment}"
-      Architectures:
-        - x86_64
-      ImageConfig:
-        Command:
-          - app.retrieval_test_handler.lambda_handler
-      Policies:
-        - AWSLambdaBasicExecutionRole
-        - AWSLambdaVPCAccessExecutionRole
-        - Statement:
-            - Sid: AllowBedrockEmbedding
-              Effect: Allow
-              Action:
-                - bedrock:InvokeModel
-              Resource: arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0
-      Environment:
-        Variables:
-          APP_ENV: !Ref Environment
-          LOG_LEVEL: INFO
-          BEDROCK_REGION: ap-south-1
-          EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
-          DATABASE_URL: !Ref DatabaseUrl
-      VpcConfig:
-        SecurityGroupIds:
-          - !Ref LambdaSecurityGroupId
-        SubnetIds:
-          - !Ref PrivateSubnetA
-          - !Ref PrivateSubnetB
-
 Outputs:
   DocumentBucketName:
     Value: !Ref DocumentsBucket
@@ -215,3 +242,12 @@ Outputs:
 
   OcrResultsWorkerFunctionName:
     Value: !Ref OcrResultsWorkerFunction
+
+  WorkspacesTableName:
+    Value: !Ref WorkspacesTable
+
+  WorkspaceMembersTableName:
+    Value: !Ref WorkspaceMembersTable
+
+  DocumentsTableName:
+    Value: !Ref DocumentsTable

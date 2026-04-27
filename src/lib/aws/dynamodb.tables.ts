@@ -1,20 +1,22 @@
 export const dynamoTables = {
   workspaces:
-    process.env.DYNAMODB_WORKSPACES_TABLE_NAME ?? "ayd_workspaces",
+    process.env.DYNAMODB_WORKSPACES_TABLE_NAME ?? "ayd-workspaces-dev",
 
   workspaceMembers:
     process.env.DYNAMODB_WORKSPACE_MEMBERS_TABLE_NAME ??
-    "ayd_workspace_members",
+    "ayd-workspace-members-dev",
 
   documents:
-    process.env.DYNAMODB_DOCUMENTS_TABLE_NAME ?? "ayd_documents",
+    process.env.DYNAMODB_DOCUMENTS_TABLE_NAME ?? "ayd-documents-dev",
 } as const;
 
-
-
 export const dynamoIndexes = {
-  userWorkspaces: "UserWorkspacesIndex",
-  documentStorageKey: "DocumentStorageKeyIndex",
+  userWorkspaces:
+    process.env.DYNAMODB_USER_WORKSPACES_INDEX_NAME ?? "UserWorkspacesIndex",
+
+  documentStorageKey:
+    process.env.DYNAMODB_DOCUMENT_STORAGE_KEY_INDEX_NAME ??
+    "DocumentStorageKeyIndex",
 } as const;
 
 export function workspaceKey(workspaceId: string) {
@@ -36,4 +38,3 @@ export function documentKey(workspaceId: string, documentId: string) {
     documentId,
   };
 }
-
