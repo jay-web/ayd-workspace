@@ -1,42 +1,87 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db/postgres";
+import {
+  getDocumentById,
+  updateDocumentStatus,
+} from "@/modules/documents/document.dynamo.repo";
+import { getSession } from "@/lib/auth/getSession";
+import { isWorkspaceMember } from "@/modules/workspace/workspace.dynamo.repo";
+import { DocumentStatus } from "@/contracts/document";
 
 type RouteContext = {
   params: Promise<{ documentId: string }>;
 };
 
+const allowedStatuses: DocumentStatus[] = [
+  "UPLOADING",
+  "PROCESSING",
+  "READY",
+  "FAILED",
+];
+
 export async function PATCH(req: NextRequest, { params }: RouteContext) {
   const { documentId } = await params;
-  const body = await req.json();
 
-  const { status } = body;
+  const session = await getSession(req);
 
-  const allowedStatuses = ["UPLOADING", "UPLOADED", "PROCESSING", "READY", "FAILED"];
+  if (!session?.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-  if (!status || !allowedStatuses.includes(status)) {
+  let body: {
+    workspaceId?: string;
+    status?: DocumentStatus;
+    errorMessage?: string | null;
+  };
+
+  try {
+    body = await req.json();
+  } catch {
     return NextResponse.json(
-      { error: "Invalid status" },
+      { error: "Invalid or missing JSON body" },
       { status: 400 }
     );
   }
 
-  const result = await db.query(
-    `
-      UPDATE documents
-      SET status = $1,
-          updated_at = NOW()
-      WHERE document_id = $2
-      RETURNING document_id
-    `,
-    [status, documentId]
-  );
+  const { workspaceId, status, errorMessage } = body;
 
-  if (result.rowCount === 0) {
+  if (!workspaceId) {
     return NextResponse.json(
-      { error: "Document not found" },
-      { status: 404 }
+      { error: "workspaceId is required" },
+      { status: 400 }
     );
   }
 
-  return NextResponse.json({ success: true });
+  if (!status || !allowedStatuses.includes(status)) {
+    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
+  const document = await getDocumentById({
+    workspaceId,
+    documentId,
+  });
+
+  if (!document) {
+    return NextResponse.json({ error: "Document not found" }, { status: 404 });
+  }
+
+  const isMember = await isWorkspaceMember({
+    workspaceId,
+    userId: session.userId,
+  });
+
+  if (!isMember) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const updated = await updateDocumentStatus({
+    workspaceId,
+    documentId,
+    status,
+    errorMessage: errorMessage ?? null,
+  });
+
+  return NextResponse.json({
+    success: true,
+    document: updated,
+  });
 }

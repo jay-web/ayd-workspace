@@ -3,43 +3,33 @@ import { randomUUID } from "crypto";
 import {
   createDocument,
   listDocumentsByWorkspace,
-} from "@/modules/documents/document.repo";
+} from "@/modules/documents/document.dynamo.repo";
 import { createDocumentUploadUrl } from "@/modules/documents/document.storage";
 import { getSession } from "@/lib/auth/getSession";
-import { isUserMemberOfWorkspace } from "@/modules/workspace/workspace.repo";
+import { isWorkspaceMember } from "@/modules/workspace/workspace.dynamo.repo";
 
 type RouteContext = {
   params: Promise<{ workspaceId: string }>;
 };
 
 // GET → list documents
-export async function GET(
-  _req: NextRequest,
-  { params }: RouteContext
-) {
+export async function GET(_req: NextRequest, { params }: RouteContext) {
   const { workspaceId } = await params;
 
   const session = await getSession(_req);
 
   if (!session?.userId) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const isMember = await isUserMemberOfWorkspace(
-    session.userId,
-    workspaceId
-  );
+  const isMember = await isWorkspaceMember({
+    workspaceId,
+    userId: session.userId,
+  });
 
   if (!isMember) {
-    return NextResponse.json(
-      { error: "Forbidden" },
-      { status: 403 }
-    );
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
-
 
   const items = await listDocumentsByWorkspace(workspaceId);
 
@@ -47,46 +37,38 @@ export async function GET(
 }
 
 // POST → create document + presigned URL
-export async function POST(
-  req: NextRequest,
-  { params }: RouteContext
-) {
+export async function POST(req: NextRequest, { params }: RouteContext) {
   const { workspaceId } = await params;
+
   const session = await getSession(req);
 
-if (!session?.userId) {
-  return NextResponse.json(
-    { error: "Unauthorized" },
-    { status: 401 }
-  );
-}
-const isMember = await isUserMemberOfWorkspace(
-  session.userId,
-  workspaceId
-);
+  if (!session?.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-if (!isMember) {
-  return NextResponse.json(
-    { error: "Forbidden" },
-    { status: 403 }
-  );
-}
+  const isMember = await isWorkspaceMember({
+    workspaceId,
+    userId: session.userId,
+  });
+
+  if (!isMember) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const body = await req.json();
 
-  const {
-    name,
-    originalFileName,
-    mimeType,
-    sizeBytes,
-  } = body;
+  const { name, originalFileName, mimeType, sizeBytes } = body;
 
- const uploadedBy = session.userId;
+  if (!name || !originalFileName || !mimeType || !sizeBytes) {
+    return NextResponse.json(
+      { error: "Missing required document fields" },
+      { status: 400 }
+    );
+  }
 
-  // ✅ Step 1: generate documentId
+  const uploadedBy = session.userId;
   const documentId = randomUUID();
 
-  // ✅ Step 2: build final storage key
   const fileExtension = originalFileName.split(".").pop() ?? "bin";
 
   const storageKey = [
@@ -96,7 +78,6 @@ if (!isMember) {
     `${documentId}.${fileExtension}`,
   ].join("/");
 
-  // ✅ Step 3: create DB row
   const document = await createDocument({
     documentId,
     workspaceId,
@@ -109,13 +90,11 @@ if (!isMember) {
     status: "UPLOADING",
   });
 
-  // ✅ Step 4: generate presigned URL
   const uploadUrl = await createDocumentUploadUrl({
     key: storageKey,
     contentType: mimeType,
   });
 
-  // ✅ Step 5: return both
   return NextResponse.json({
     document,
     uploadUrl,
