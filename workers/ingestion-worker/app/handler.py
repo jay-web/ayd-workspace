@@ -3,13 +3,15 @@ import logging
 import os
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import unquote_plus
+
 from app.s3_reader import read_s3_object
 from app.pdf_extractor import extract_pdf_pages
 from app.chunker import chunk_document
-from app.services.embeddings import generate_embedding
-from app.repositories.document_chunks import insert_document_chunks
-from app.repositories.documents import find_document_by_storage_key
-from app.repositories.documents import update_document_status_by_storage_key
+from app.repositories.documents_dynamo import (
+    find_document_by_storage_key,
+    update_document_status,
+)
+
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
 
@@ -33,6 +35,7 @@ def parse_sqs_body(body: str) -> Tuple[Optional[str], str, Dict[str, Any]]:
     # Case 1: direct S3 event notification inside SQS body
     if isinstance(payload, dict) and "Records" in payload and payload["Records"]:
         first = payload["Records"][0]
+
         if first.get("eventSource") == "aws:s3":
             bucket_name = first["s3"]["bucket"]["name"]
             raw_key = first["s3"]["object"]["key"]
@@ -41,13 +44,11 @@ def parse_sqs_body(body: str) -> Tuple[Optional[str], str, Dict[str, Any]]:
 
     # Case 2: manual/custom payload
     if isinstance(payload, dict) and payload.get("storageKey"):
-        return payload.get("bucket_name"), payload["storageKey"], payload
+        bucket_name = payload.get("bucket") or payload.get("bucket_name")
+        return bucket_name, payload["storageKey"], payload
 
     raise ValueError("Unsupported SQS message body format")
 
-
-import os
-from typing import Any, Dict, Optional
 
 def process_document_message(
     bucket_name: Optional[str],
@@ -63,6 +64,21 @@ def process_document_message(
     if not bucket_name:
         raise ValueError("bucket_name is missing in message payload")
 
+    document = find_document_by_storage_key(storage_key)
+
+    if not document:
+        raise ValueError(f"Document not found for storage_key={storage_key}")
+
+    workspace_id = str(document["workspaceId"])
+    document_id = str(document["documentId"])
+
+    log_info(
+        "document.process.metadata.found",
+        workspaceId=workspace_id,
+        documentId=document_id,
+        status=document.get("status"),
+    )
+
     file_bytes = read_s3_object(bucket_name, storage_key)
 
     log_info(
@@ -74,12 +90,14 @@ def process_document_message(
 
     log_info("document.process.extract.start")
     pages = extract_pdf_pages(file_bytes)
+
     log_info(
         "document.process.extract.done",
         pageCount=len(pages),
     )
 
     chunks = chunk_document(pages)
+
     log_info(
         "document.process.chunk.done",
         chunkCount=len(chunks),
@@ -88,59 +106,21 @@ def process_document_message(
     if not chunks:
         raise ValueError(f"No chunks generated for storage_key={storage_key}")
 
-    document = find_document_by_storage_key(
-        db_url=os.environ["DATABASE_URL"],
-        storage_key=storage_key,
-    )
-
-    if not document:
-        raise ValueError(f"Document not found for storage_key={storage_key}")
-
-    enriched_chunks = []
-
-    for chunk in chunks:
-        chunk_index = chunk["chunk_index"]
-
-        log_info("document.process.embedding.start", chunkIndex=chunk_index)
-        embedding = generate_embedding(chunk["content"])
-        log_info(
-            "document.process.embedding.done",
-            chunkIndex=chunk_index,
-            embeddingLength=len(embedding),
-        )
-
-        chunk["embedding"] = embedding
-
-        if "page_start" not in chunk or "page_end" not in chunk:
-            page_number = chunk.get("page_number")
-            chunk["page_start"] = page_number
-            chunk["page_end"] = page_number
-
-        enriched_chunks.append(chunk)
-
-    log_info(
-        "document.process.db_insert.start",
-        chunkCount=len(enriched_chunks),
-    )
-
-    insert_document_chunks(
-        db_url=os.environ["DATABASE_URL"],
-        document_id=str(document["document_id"]),
-        workspace_id=str(document["workspace_id"]),
-        chunks=enriched_chunks,
+    # Temporary Phase 2 migration behavior:
+    # We only prove S3 -> SQS -> Lambda -> DynamoDB status update first.
+    # S3 Vectors insertion will be added in the next step.
+    update_document_status(
+        workspace_id=workspace_id,
+        document_id=document_id,
+        status="READY",
     )
 
     log_info(
-        "document.process.db_insert.done",
-        chunkCount=len(enriched_chunks),
+        "document.process.status.updated",
+        workspaceId=workspace_id,
+        documentId=document_id,
+        status="READY",
     )
-
-    update_document_status_by_storage_key(
-    db_url=os.environ["DATABASE_URL"],
-    storage_key=storage_key,
-    status="READY",
-)
-
 
 
 def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
@@ -194,6 +174,9 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 messageId=message_id,
                 error=str(exc),
             )
+
+            # Best-effort failure status update.
+            # If parsing failed or document lookup failed, we may not know documentId/workspaceId.
             batch_item_failures.append({"itemIdentifier": message_id})
 
     result = {"batchItemFailures": batch_item_failures}
