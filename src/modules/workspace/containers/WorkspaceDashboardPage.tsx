@@ -8,8 +8,8 @@ import { RecentIngestionCard } from "@/modules/workspace/components/dashboard/Re
 import { StorageOverviewCard } from "@/modules/workspace/components/dashboard/StorageOverviewCard";
 import { WorkspaceDashboardHero } from "@/modules/workspace/components/dashboard/WorkspaceDashboardHero";
 import { WorkspaceMembersCard } from "@/modules/workspace/components/dashboard/WorkspaceMembersCard";
-import { listDocumentsByWorkspace } from "@/modules/documents/document.repo";
-import { getWorkspaceById } from "@/modules/workspace/workspace.repo";
+import { listDocumentsByWorkspace } from "@/modules/documents/document.dynamo.repo";
+import { getWorkspaceById } from "@/modules/workspace/workspace.dynamo.repo";
 
 type WorkspaceDashboardPageProps = {
   workspaceId: string;

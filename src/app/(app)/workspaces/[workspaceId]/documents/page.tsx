@@ -1,9 +1,10 @@
 import DocumentsAutoRefresh from "@/modules/documents/components/DocumentsAutoRefresh";
 import DocumentsUploadCard from "@/modules/documents/components/DocumentsUploadCard";
-import { listDocumentsByWorkspace } from "@/modules/documents/document.repo";
+import { listDocumentsByWorkspace } from "@/modules/documents/document.dynamo.repo";
 import { getServerSession } from "@/lib/auth/getServerSession";
-import { isUserMemberOfWorkspace } from "@/modules/workspace/workspace.repo";
+
 import { redirect } from "next/navigation";
+import { isWorkspaceMember } from "@/modules/workspace/workspace.dynamo.repo";
 
 type DocumentListItem = {
   documentId: string;
@@ -49,7 +50,7 @@ export default async function WorkspaceDocumentsPage({
     redirect("/login");
   }
 
-  const isMember = await isUserMemberOfWorkspace(session.userId, workspaceId);
+  const isMember = await isWorkspaceMember({workspaceId, userId: session.userId});
 
   if (!isMember) {
     redirect("/workspaces");
