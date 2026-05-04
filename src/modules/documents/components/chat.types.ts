@@ -1,7 +1,9 @@
+import { DocumentStatus } from "@/contracts/document";
+
 export type ChatDocument = {
   documentId: string;
   name: string;
-  status: "UPLOADING" | "PROCESSING" | "READY" | "FAILED";
+  status: DocumentStatus
 };
 
 export type ChatCitation = {

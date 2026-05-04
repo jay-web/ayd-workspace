@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { DocumentStatus } from "@/contracts/document";
 
 type DocumentListItem = {
-  status: "UPLOADING" | "PROCESSING" | "READY" | "FAILED";
+  status: DocumentStatus
 };
 
 export default function DocumentsAutoRefresh({

@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth/getSession";
-import { getWorkspaceForUser } from "@/modules/workspace/workspace.repo";
+import {
+  getWorkspaceById,
+  isWorkspaceMember,
+} from "@/modules/workspace/workspace.dynamo.repo";
 
 export async function GET(
   request: Request,
@@ -15,19 +18,25 @@ export async function GET(
   const { workspaceId } = await params;
 
   try {
-    const workspace = await getWorkspaceForUser({
-      workspaceId,
-      userId: session.userId,
-    });
+   const isMember = await isWorkspaceMember({workspaceId, userId: session.userId});
 
-    if (!workspace) {
-      return NextResponse.json(
-        { error: "Workspace not found" },
-        { status: 404 }
-      );
-    }
+if (!isMember) {
+  return NextResponse.json(
+    { error: "Workspace not found" },
+    { status: 404 }
+  );
+}
 
-    return NextResponse.json({ workspace }, { status: 200 });
+const workspace = await getWorkspaceById(workspaceId);
+
+if (!workspace) {
+  return NextResponse.json(
+    { error: "Workspace not found" },
+    { status: 404 }
+  );
+}
+
+return NextResponse.json({ workspace });
   } catch (error) {
     console.error("Failed to fetch workspace:", error);
 
