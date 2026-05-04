@@ -142,20 +142,43 @@ export default function WorkspaceChatContainer({
         setQuestion("");
       }
 
-      const res = await fetch(`/api/v1/documents/${selectedDocumentId}/ask`, {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ question: finalQuestion }),
+        body: JSON.stringify({
+          question: finalQuestion,
+          documentId: selectedDocumentId,
+        }),
       });
 
       const data = await res.json();
 
+      if (!res.ok) {
+        throw new Error(data.error ?? "Ask request failed");
+      }
+
+      const citations: ChatCitation[] = (data.sources ?? []).map(
+        (source: {
+          sourceNumber?: number;
+          vectorKey?: string;
+          distance?: number;
+          documentId?: string;
+          chunkId?: string;
+          pageNumber?: number | null;
+        }) => ({
+          chunkIndex: source.sourceNumber ?? 0,
+          pageStart: source.pageNumber ?? null,
+          pageEnd: source.pageNumber ?? null,
+          content: source.chunkId ?? source.vectorKey ?? "Source",
+        }),
+      );
+
       const assistantMessage: ChatMessage = {
         role: "assistant",
         content: data.answer ?? data.error ?? "No response",
-        citations: data.citations ?? [],
+        citations,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -166,7 +189,7 @@ export default function WorkspaceChatContainer({
 
   return (
     <section className="h-full min-h-0 overflow-hidden bg-[#f6f8f7] text-slate-900">
-       <DocumentsAutoRefresh documents={availableDocuments} />
+      <DocumentsAutoRefresh documents={availableDocuments} />
       <div className="flex h-full min-h-0 max-w-none gap-1.5">
         <ChatDocumentsPanel
           workspaceId={workspaceId}

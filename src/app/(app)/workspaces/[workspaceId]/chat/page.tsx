@@ -1,5 +1,6 @@
 import WorkspaceChatContainer from "@/modules/documents/components/WorkspaceChatContainer";
-import { listDocumentsByWorkspace } from "@/modules/documents/document.repo";
+import { listDocumentsByWorkspace } from "@/modules/documents/document.dynamo.repo";
+
 
 type WorkspaceChatPageProps = {
   params: Promise<{ workspaceId: string }>;
