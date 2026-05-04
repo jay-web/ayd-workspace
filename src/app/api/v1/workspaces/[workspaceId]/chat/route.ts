@@ -81,14 +81,22 @@ const answer = await generateAnswer(question, answerChunks);
     return NextResponse.json({
       question,
       answer,
-      sources: usableChunks.map((item, index) => ({
-        sourceNumber: index + 1,
-        vectorKey: item.vectorKey,
-        distance: item.distance,
-        documentId: item.chunk?.documentId,
-        chunkId: item.chunk?.chunkId,
-        pageNumber: item.chunk?.pageNumber,
-      })),
+      sources: usableChunks.map((item, index) => {
+        const chunk = item.chunk as Record<string, unknown> | undefined;
+        const metadata = item.metadata as Record<string, unknown> | undefined;
+        
+        return {
+          sourceNumber: index + 1,
+          vectorKey: item.vectorKey,
+          distance: item.distance,
+          documentId: chunk?.documentId ?? metadata?.documentId,
+          chunkId: chunk?.chunkId ?? metadata?.chunkId,
+          pageNumber: chunk?.pageNumber ?? metadata?.pageNumber,
+          pageStart: chunk?.pageStart ?? metadata?.pageStart ?? chunk?.pageNumber ?? metadata?.pageNumber,
+          pageEnd: chunk?.pageEnd ?? metadata?.pageEnd ?? chunk?.pageNumber ?? metadata?.pageNumber,
+          sourcePreview: chunk?.sourcePreview ?? metadata?.sourcePreview,
+        };
+      }),
     });
   } catch (error) {
     console.error("chat.failed", error);

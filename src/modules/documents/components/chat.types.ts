@@ -11,6 +11,8 @@ export type ChatCitation = {
   pageStart: number | null;
   pageEnd: number | null;
   content: string;
+  documentId?: string;
+  chunkId?: string;
 };
 
 export type ChatMessage = {

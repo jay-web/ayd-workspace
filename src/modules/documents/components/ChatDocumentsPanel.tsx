@@ -84,8 +84,9 @@ export default function ChatDocumentsPanel({
   onDocumentsChanged,
 }: ChatDocumentsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<DocumentFilter>("ALL");
+const [searchTerm, setSearchTerm] = useState("");
+const [statusFilter, setStatusFilter] = useState<DocumentFilter>("ALL");
+const [latestUploadedDocumentId, setLatestUploadedDocumentId] = useState<string | null>(null);
 
   const {
     inputRef,
@@ -96,25 +97,39 @@ export default function ChatDocumentsPanel({
   } = useDocumentUpload({
     workspaceId,
     onUploaded: async (documentId) => {
-      await onDocumentsChanged?.(documentId);
-      onSelectDocument(documentId);
-    },
+  setLatestUploadedDocumentId(documentId);
+  setStatusFilter("ALL");
+  setSearchTerm("");
+
+  await onDocumentsChanged?.(documentId);
+  onSelectDocument(documentId);
+},
   });
 
-  const filteredDocuments = useMemo(() => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
+ const filteredDocuments = useMemo(() => {
+  const normalizedSearch = searchTerm.trim().toLowerCase();
 
-    return documents.filter((doc) => {
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        doc.name.toLowerCase().includes(normalizedSearch);
+  const filtered = documents.filter((doc) => {
+    const matchesSearch =
+      normalizedSearch.length === 0 ||
+      doc.name.toLowerCase().includes(normalizedSearch);
 
-      const matchesStatus =
-        statusFilter === "ALL" || doc.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "ALL" || doc.status === statusFilter;
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [documents, searchTerm, statusFilter]);
+    return matchesSearch && matchesStatus;
+  });
+
+  if (!latestUploadedDocumentId) {
+    return filtered;
+  }
+
+  return [...filtered].sort((a, b) => {
+    if (a.id === latestUploadedDocumentId) return -1;
+    if (b.id === latestUploadedDocumentId) return 1;
+    return 0;
+  });
+}, [documents, searchTerm, statusFilter, latestUploadedDocumentId]);
 
   return (
     <aside

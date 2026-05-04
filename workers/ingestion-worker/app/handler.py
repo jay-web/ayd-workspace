@@ -185,6 +185,12 @@ def put_chunk_vectors(
         vector_key = build_vector_key(workspace_id, document_id, chunk_index)
 
         embedding = create_embedding(text)
+        
+        # Extract page range and preview
+        chunk_metadata = get_chunk_value(chunk, "metadata", {})
+        page_start = chunk_metadata.get("page_start", page_number)
+        page_end = chunk_metadata.get("page_end", page_number)
+        source_preview = generate_source_preview(text)
 
         metadata: Dict[str, Any] = {
             "workspaceId": workspace_id,
@@ -195,8 +201,12 @@ def put_chunk_vectors(
 
         if page_number is not None:
             metadata["pageNumber"] = page_number
-
-        
+        if page_start is not None:
+            metadata["pageStart"] = page_start
+        if page_end is not None:
+            metadata["pageEnd"] = page_end
+        if source_preview:
+            metadata["sourcePreview"] = source_preview
 
         vectors.append(
             {
@@ -243,26 +253,59 @@ def put_chunk_vectors(
         vectorCount=len(vectors),
     )
 
+def generate_source_preview(text: str, max_length: int = 200) -> str:
+    """
+    Generate a truncated preview of the chunk text for display.
+    Keeps it under 200 characters and removes excessive whitespace.
+    """
+    if not text:
+        return ""
+    
+    # Replace multiple newlines/spaces with single space
+    cleaned = " ".join(text.split())
+    
+    # Truncate to max_length
+    if len(cleaned) <= max_length:
+        return cleaned
+    
+    return cleaned[:max_length].rstrip() + "..."
+
+
 def save_document_chunks(
     *,
     workspace_id: str,
     document_id: str,
-    chunks: list[str],
+    chunks: List[Any],
 ):
     now = datetime.now(timezone.utc).isoformat()
 
     with document_chunks_table.batch_writer() as batch:
-        for index, chunk_text in enumerate(chunks):
+        for index, chunk in enumerate(chunks):
             chunk_id = f"chunk-{index:04d}"
             vector_key = f"{workspace_id}/{document_id}/{chunk_id}"
+
+            # Extract chunk content and metadata
+            content = get_chunk_text(chunk)
+            page_number = get_chunk_page_number(chunk)
+            metadata = get_chunk_value(chunk, "metadata", {})
+            
+            # Fallback page range if not in metadata
+            page_start = metadata.get("page_start", page_number) or page_number
+            page_end = metadata.get("page_end", page_number) or page_number
+            
+            # Generate source preview
+            source_preview = generate_source_preview(content)
 
             batch.put_item(
                 Item={
                     "documentId": document_id,
                     "chunkId": chunk_id,
                     "workspaceId": workspace_id,
-                    "text": chunk_text,
-                    "pageNumber": 1,
+                    "text": content,
+                    "pageNumber": page_number or 1,
+                    "pageStart": page_start or 1,
+                    "pageEnd": page_end or 1,
+                    "sourcePreview": source_preview,
                     "vectorKey": vector_key,
                     "createdAt": now,
                 }
@@ -322,6 +365,8 @@ def process_document_message(
 
     log_info("document.process.extract.start")
     pages = extract_pdf_pages(file_bytes)
+
+  
 
     log_info(
         "document.process.extract.done",

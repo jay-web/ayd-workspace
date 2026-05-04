@@ -98,13 +98,13 @@ export default function ChatMainPanel({
             </div>
           </div>
 
-          <button
+          {/* <button
             type="button"
             className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-[12px] font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Change document
             <ChevronDown className="h-3.5 w-3.5" />
-          </button>
+          </button> */}
         </div>
 
        <div className="px-0.5 pb-2 pt-2">

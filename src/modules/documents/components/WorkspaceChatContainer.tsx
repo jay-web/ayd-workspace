@@ -167,11 +167,16 @@ export default function WorkspaceChatContainer({
           documentId?: string;
           chunkId?: string;
           pageNumber?: number | null;
+          pageStart?: number | null;
+          pageEnd?: number | null;
+          sourcePreview?: string;
         }) => ({
           chunkIndex: source.sourceNumber ?? 0,
-          pageStart: source.pageNumber ?? null,
-          pageEnd: source.pageNumber ?? null,
-          content: source.chunkId ?? source.vectorKey ?? "Source",
+          pageStart: source.pageStart ?? source.pageNumber ?? null,
+          pageEnd: source.pageEnd ?? source.pageStart ?? source.pageNumber ?? null,
+          content: source.sourcePreview ?? source.chunkId ?? source.vectorKey ?? "Source",
+          documentId: source.documentId ?? selectedDocumentId,
+          chunkId: source.chunkId,
         }),
       );
 
@@ -216,6 +221,8 @@ export default function WorkspaceChatContainer({
           collapsed={citationsCollapsed}
           onCollapsedChange={setCitationsCollapsed}
           scrollToTopToken={scrollToTopToken}
+          workspaceId={workspaceId}
+          selectedDocumentId={selectedDocumentId}
         />
       </div>
     </section>
