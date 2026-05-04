@@ -11,6 +11,22 @@ Parameters:
     Type: String
     Default: ayd-workspace-jay-docs
 
+  VectorBucketName:
+    Type: String
+    Default: ayd-vectors-jay-dev
+
+  VectorIndexName:
+    Type: String
+    Default: document-chunks
+
+  EmbeddingModelId:
+    Type: String
+    Default: amazon.titan-embed-text-v2:0
+
+  BedrockRegion:
+    Type: String
+    Default: ap-south-1
+
 Globals:
   Function:
     Timeout: 30
@@ -141,6 +157,37 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  #################################################
+  # S3 Vectors - vector bucket for AYD embeddings
+  #################################################
+
+  AydVectorBucket:
+    Type: AWS::S3Vectors::VectorBucket
+    Properties:
+      VectorBucketName: !Ref VectorBucketName
+      Tags:
+        - Key: Project
+          Value: AYD
+        - Key: Environment
+          Value: !Ref Environment
+
+  #################################################
+  # S3 Vectors - vector index for document chunks
+  #################################################
+
+  AydVectorIndex:
+    Type: AWS::S3Vectors::Index
+    DependsOn: AydVectorBucket
+    Properties:
+      VectorBucketName: !Ref VectorBucketName
+      IndexName: !Ref VectorIndexName
+      Dimension: 1024
+      DistanceMetric: cosine
+      DataType: float32
+      MetadataConfiguration:
+        NonFilterableMetadataKeys:
+          - fileName
+
   IngestionWorkerFunction:
     Type: AWS::Serverless::Function
     Metadata:
@@ -150,10 +197,14 @@ Resources:
     Properties:
       PackageType: Image
       FunctionName: !Sub "ayd-ingestion-worker-${Environment}"
+      Timeout: 180
+      MemorySize: 1024
       Architectures:
         - x86_64
       Policies:
         - AWSLambdaSQSQueueExecutionRole
+        - DynamoDBCrudPolicy:
+            TableName: !Ref DocumentChunksTable
         - Statement:
             - Sid: AllowReadDocumentsBucket
               Effect: Allow
@@ -171,7 +222,17 @@ Resources:
               Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: arn:aws:bedrock:ap-south-1::foundation-model/amazon.titan-embed-text-v2:0
+              Resource: !Sub "arn:aws:bedrock:${BedrockRegion}::foundation-model/${EmbeddingModelId}"
+
+            - Sid: AllowAydS3VectorsAccess
+              Effect: Allow
+              Action:
+                - s3vectors:PutVectors
+                - s3vectors:GetVectors
+                - s3vectors:DeleteVectors
+                - s3vectors:QueryVectors
+                - s3vectors:ListVectors
+              Resource: "*"
 
             - Sid: AllowAydDynamoDbAccess
               Effect: Allow
@@ -193,15 +254,21 @@ Resources:
         Variables:
           APP_ENV: !Ref Environment
           LOG_LEVEL: INFO
+
           DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
-          BEDROCK_REGION: ap-south-1
-          EMBEDDING_MODEL_ID: amazon.titan-embed-text-v2:0
+
+          BEDROCK_REGION: !Ref BedrockRegion
+          EMBEDDING_MODEL_ID: !Ref EmbeddingModelId
+
+          VECTOR_BUCKET_NAME: !Ref VectorBucketName
+          VECTOR_INDEX_NAME: !Ref VectorIndexName
 
           WORKSPACES_TABLE_NAME: !Ref WorkspacesTable
           WORKSPACE_MEMBERS_TABLE_NAME: !Ref WorkspaceMembersTable
           DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
           USER_WORKSPACES_INDEX_NAME: UserWorkspacesIndex
           DOCUMENT_STORAGE_KEY_INDEX_NAME: DocumentStorageKeyIndex
+          DOCUMENT_CHUNKS_TABLE: !Ref DocumentChunksTable
 
       Events:
         IngestionQueueTrigger:
@@ -226,6 +293,21 @@ Resources:
           APP_ENV: !Ref Environment
           LOG_LEVEL: INFO
           DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
+  
+  DocumentChunksTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: documentId
+          AttributeType: S
+        - AttributeName: chunkId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: documentId
+          KeyType: HASH
+        - AttributeName: chunkId
+          KeyType: RANGE
 
 Outputs:
   DocumentBucketName:
@@ -251,3 +333,9 @@ Outputs:
 
   DocumentsTableName:
     Value: !Ref DocumentsTable
+
+  VectorBucketName:
+    Value: !Ref VectorBucketName
+
+  VectorIndexName:
+    Value: !Ref VectorIndexName

@@ -1,8 +1,11 @@
 import json
 import logging
 import os
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import unquote_plus
+from datetime import datetime, timezone
+
+import boto3
 
 from app.s3_reader import read_s3_object
 from app.pdf_extractor import extract_pdf_pages
@@ -14,6 +17,23 @@ from app.repositories.documents_dynamo import (
 
 logger = logging.getLogger()
 logger.setLevel(os.getenv("LOG_LEVEL", "INFO"))
+
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", "ap-south-1")
+EMBEDDING_MODEL_ID = os.getenv("EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0")
+
+VECTOR_BUCKET_NAME = os.getenv("VECTOR_BUCKET_NAME")
+VECTOR_INDEX_NAME = os.getenv("VECTOR_INDEX_NAME")
+
+EMBEDDING_DIMENSIONS = int(os.getenv("EMBEDDING_DIMENSIONS", "1024"))
+VECTOR_BATCH_SIZE = int(os.getenv("VECTOR_BATCH_SIZE", "100"))
+
+DOCUMENT_CHUNKS_TABLE = os.environ["DOCUMENT_CHUNKS_TABLE"]
+
+bedrock_runtime = boto3.client("bedrock-runtime", region_name=BEDROCK_REGION)
+s3vectors = boto3.client("s3vectors")
+
+dynamodb = boto3.resource("dynamodb")
+document_chunks_table = dynamodb.Table(DOCUMENT_CHUNKS_TABLE)
 
 
 def log_info(message: str, **kwargs: Any) -> None:
@@ -50,6 +70,205 @@ def parse_sqs_body(body: str) -> Tuple[Optional[str], str, Dict[str, Any]]:
     raise ValueError("Unsupported SQS message body format")
 
 
+def get_chunk_value(chunk: Any, key: str, default: Any = None) -> Any:
+    """
+    Supports chunk as dict or object.
+
+    This protects us because your chunker may return either:
+      { "text": "...", "pageNumber": 1 }
+    or:
+      Chunk(text="...", page_number=1)
+    """
+    if isinstance(chunk, dict):
+        return chunk.get(key, default)
+
+    return getattr(chunk, key, default)
+
+
+def get_chunk_text(chunk: Any) -> str:
+    text = (
+        get_chunk_value(chunk, "text")
+        or get_chunk_value(chunk, "content")
+        or get_chunk_value(chunk, "chunk_text")
+        or ""
+    )
+
+    return str(text).strip()
+
+
+def get_chunk_page_number(chunk: Any) -> Optional[int]:
+    page_number = (
+        get_chunk_value(chunk, "pageNumber")
+        or get_chunk_value(chunk, "page_number")
+        or get_chunk_value(chunk, "page")
+    )
+
+    if page_number is None:
+        return None
+
+    try:
+        return int(page_number)
+    except Exception:
+        return None
+
+
+def create_embedding(text: str) -> List[float]:
+    """
+    Creates a 1024-dimension float embedding using Amazon Titan Text Embeddings V2.
+    This must match the S3 Vector index dimension.
+    """
+    if not text:
+        raise ValueError("Cannot create embedding for empty text")
+
+    body = {
+        "inputText": text,
+        "dimensions": EMBEDDING_DIMENSIONS,
+        "normalize": True,
+        "embeddingTypes": ["float"],
+    }
+
+    response = bedrock_runtime.invoke_model(
+        modelId=EMBEDDING_MODEL_ID,
+        body=json.dumps(body),
+        accept="application/json",
+        contentType="application/json",
+    )
+
+    response_body = json.loads(response["body"].read())
+
+    embedding = response_body.get("embedding")
+
+    if not embedding:
+        embedding = response_body.get("embeddingsByType", {}).get("float")
+
+    if not embedding:
+        raise ValueError("Bedrock embedding response did not contain a float embedding")
+
+    return [float(value) for value in embedding]
+
+
+def build_vector_key(workspace_id: str, document_id: str, chunk_index: int) -> str:
+    return f"{workspace_id}/{document_id}/chunk-{chunk_index:04d}"
+
+
+def batch_items(items: List[Dict[str, Any]], batch_size: int) -> List[List[Dict[str, Any]]]:
+    return [items[i : i + batch_size] for i in range(0, len(items), batch_size)]
+
+
+def put_chunk_vectors(
+    workspace_id: str,
+    document_id: str,
+    storage_key: str,
+    chunks: List[Any],
+) -> None:
+    if not VECTOR_BUCKET_NAME:
+        raise ValueError("VECTOR_BUCKET_NAME environment variable is missing")
+
+    if not VECTOR_INDEX_NAME:
+        raise ValueError("VECTOR_INDEX_NAME environment variable is missing")
+
+    vectors: List[Dict[str, Any]] = []
+
+    for chunk_index, chunk in enumerate(chunks):
+        text = get_chunk_text(chunk)
+
+        if not text:
+            log_info(
+                "document.vector.chunk.skipped_empty",
+                workspaceId=workspace_id,
+                documentId=document_id,
+                chunkIndex=chunk_index,
+            )
+            continue
+
+        page_number = get_chunk_page_number(chunk)
+        vector_key = build_vector_key(workspace_id, document_id, chunk_index)
+
+        embedding = create_embedding(text)
+
+        metadata: Dict[str, Any] = {
+            "workspaceId": workspace_id,
+            "documentId": document_id,
+            "chunkIndex": chunk_index,
+            "storageKey": storage_key,
+        }
+
+        if page_number is not None:
+            metadata["pageNumber"] = page_number
+
+        
+
+        vectors.append(
+            {
+                "key": vector_key,
+                "data": {
+                    "float32": embedding,
+                },
+                "metadata": metadata,
+            }
+        )
+
+        log_info(
+            "document.vector.chunk.embedded",
+            workspaceId=workspace_id,
+            documentId=document_id,
+            chunkIndex=chunk_index,
+            vectorKey=vector_key,
+            dimension=len(embedding),
+        )
+
+    if not vectors:
+        raise ValueError("No vectors created from chunks")
+
+    for batch in batch_items(vectors, VECTOR_BATCH_SIZE):
+        s3vectors.put_vectors(
+            vectorBucketName=VECTOR_BUCKET_NAME,
+            indexName=VECTOR_INDEX_NAME,
+            vectors=batch,
+        )
+
+        log_info(
+            "document.vector.batch.put",
+            workspaceId=workspace_id,
+            documentId=document_id,
+            batchSize=len(batch),
+            vectorBucketName=VECTOR_BUCKET_NAME,
+            vectorIndexName=VECTOR_INDEX_NAME,
+        )
+
+    log_info(
+        "document.vector.put.done",
+        workspaceId=workspace_id,
+        documentId=document_id,
+        vectorCount=len(vectors),
+    )
+
+def save_document_chunks(
+    *,
+    workspace_id: str,
+    document_id: str,
+    chunks: list[str],
+):
+    now = datetime.now(timezone.utc).isoformat()
+
+    with document_chunks_table.batch_writer() as batch:
+        for index, chunk_text in enumerate(chunks):
+            chunk_id = f"chunk-{index:04d}"
+            vector_key = f"{workspace_id}/{document_id}/{chunk_id}"
+
+            batch.put_item(
+                Item={
+                    "documentId": document_id,
+                    "chunkId": chunk_id,
+                    "workspaceId": workspace_id,
+                    "text": chunk_text,
+                    "pageNumber": 1,
+                    "vectorKey": vector_key,
+                    "createdAt": now,
+                }
+            )
+
+
 def process_document_message(
     bucket_name: Optional[str],
     storage_key: str,
@@ -79,6 +298,19 @@ def process_document_message(
         status=document.get("status"),
     )
 
+    update_document_status(
+        workspace_id=workspace_id,
+        document_id=document_id,
+        status="PROCESSING",
+    )
+
+    log_info(
+        "document.process.status.updated",
+        workspaceId=workspace_id,
+        documentId=document_id,
+        status="PROCESSING",
+    )
+
     file_bytes = read_s3_object(bucket_name, storage_key)
 
     log_info(
@@ -105,10 +337,20 @@ def process_document_message(
 
     if not chunks:
         raise ValueError(f"No chunks generated for storage_key={storage_key}")
+    
+    save_document_chunks(
+        workspace_id=workspace_id,
+        document_id=document_id,
+        chunks=chunks,
+        )
 
-    # Temporary Phase 2 migration behavior:
-    # We only prove S3 -> SQS -> Lambda -> DynamoDB status update first.
-    # S3 Vectors insertion will be added in the next step.
+    put_chunk_vectors(
+        workspace_id=workspace_id,
+        document_id=document_id,
+        storage_key=storage_key,
+        chunks=chunks,
+    )
+
     update_document_status(
         workspace_id=workspace_id,
         document_id=document_id,
@@ -175,8 +417,6 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 error=str(exc),
             )
 
-            # Best-effort failure status update.
-            # If parsing failed or document lookup failed, we may not know documentId/workspaceId.
             batch_item_failures.append({"itemIdentifier": message_id})
 
     result = {"batchItemFailures": batch_item_failures}
@@ -189,3 +429,5 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     )
 
     return result
+
+
