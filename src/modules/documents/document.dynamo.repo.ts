@@ -1,4 +1,6 @@
 import {
+  BatchWriteCommand,
+  DeleteCommand,
   GetCommand,
   PutCommand,
   QueryCommand,
@@ -158,4 +160,76 @@ export async function getDocumentStatsByWorkspace(
       failedDocuments: 0,
     }
   );
+}
+
+export async function deleteDocumentById(input: {
+  workspaceId: string;
+  documentId: string;
+}) {
+  const result = await dynamo.send(
+    new DeleteCommand({
+      TableName: dynamoTables.documents,
+      Key: documentKey(input.workspaceId, input.documentId),
+      ReturnValues: "ALL_OLD",
+    })
+  );
+
+  return (result.Attributes as DocumentItem | undefined) ?? null;
+}
+
+export async function deleteDocumentChunksByDocumentId(documentId: string) {
+  if (!process.env.DOCUMENT_CHUNKS_TABLE) {
+    throw new Error("DOCUMENT_CHUNKS_TABLE environment variable is missing");
+  }
+
+  const result = await dynamo.send(
+    new QueryCommand({
+      TableName: process.env.DOCUMENT_CHUNKS_TABLE,
+      KeyConditionExpression: "documentId = :documentId",
+      ExpressionAttributeValues: {
+        ":documentId": documentId,
+      },
+    })
+  );
+
+  const chunks = (result.Items ?? []) as {
+  documentId: string;
+  chunkId: string;
+  vectorKey?: string;
+}[];
+
+  if (chunks.length === 0) {
+  return {
+    deletedCount: 0,
+    vectorKeys: [],
+  };
+}
+
+const vectorKeys = chunks
+  .map((chunk) => chunk.vectorKey)
+  .filter((vectorKey): vectorKey is string => Boolean(vectorKey));
+
+  for (let i = 0; i < chunks.length; i += 25) {
+    const batch = chunks.slice(i, i + 25);
+
+    await dynamo.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [process.env.DOCUMENT_CHUNKS_TABLE]: batch.map((chunk) => ({
+            DeleteRequest: {
+              Key: {
+                documentId: chunk.documentId,
+                chunkId: chunk.chunkId,
+              },
+            },
+          })),
+        },
+      })
+    );
+  }
+
+ return {
+  deletedCount: chunks.length,
+  vectorKeys,
+};
 }

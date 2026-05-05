@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import ChatDocumentsPanel from "./ChatDocumentsPanel";
 import ChatCitationsPanel from "./ChatCitationsPanel";
 import {
@@ -23,6 +23,8 @@ export default function WorkspaceChatContainer({
   documents,
 }: WorkspaceChatContainerProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const documentIdFromUrl = searchParams.get("documentId");
 
   const availableDocuments: ChatDocumentView[] = useMemo(() => {
     function getSubtitle(status: ChatDocument["status"]) {
@@ -55,7 +57,12 @@ export default function WorkspaceChatContainer({
   }, [documents]);
 
   const [selectedDocumentId, setSelectedDocumentId] = useState(() => {
+    const routedDocument = availableDocuments.find(
+      (doc) => doc.id === documentIdFromUrl && doc.status === "READY"
+    );
+
     return (
+      routedDocument?.id ??
       availableDocuments.find((doc) => doc.status === "READY")?.id ??
       availableDocuments[0]?.id ??
       ""
@@ -73,10 +80,19 @@ export default function WorkspaceChatContainer({
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    const routedDocument = availableDocuments.find(
+      (doc) => doc.id === documentIdFromUrl && doc.status === "READY"
+    );
+
+    if (routedDocument && selectedDocumentId !== routedDocument.id) {
+      setSelectedDocumentId(routedDocument.id);
+      return;
+    }
+
     if (!selectedDocumentId && availableDocuments[0]?.id) {
       setSelectedDocumentId(availableDocuments[0].id);
     }
-  }, [availableDocuments, selectedDocumentId]);
+  }, [availableDocuments, documentIdFromUrl, selectedDocumentId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

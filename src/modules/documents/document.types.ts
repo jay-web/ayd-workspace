@@ -84,6 +84,7 @@ export type DocumentItem = {
   originalFileName: string;
   mimeType: string;
   sizeBytes: number;
+  chunkCount?: number | null;
   storageKey: string;
   uploadedBy: string;
   status: DocumentStatus;

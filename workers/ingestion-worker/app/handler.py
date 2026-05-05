@@ -397,10 +397,11 @@ def process_document_message(
     )
 
     update_document_status(
-        workspace_id=workspace_id,
-        document_id=document_id,
-        status="READY",
-    )
+    workspace_id=workspace_id,
+    document_id=document_id,
+    status="READY",
+    chunk_count=len(chunks),
+)
 
     log_info(
         "document.process.status.updated",

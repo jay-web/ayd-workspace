@@ -7,7 +7,8 @@ from boto3.dynamodb.conditions import Key
 
 dynamodb = boto3.resource(
     "dynamodb",
-    region_name=os.getenv("AWS_REGION") or os.getenv("BEDROCK_REGION") or "ap-south-1",
+    region_name=os.getenv("AWS_REGION") or os.getenv(
+        "BEDROCK_REGION") or "ap-south-1",
 )
 
 documents_table = dynamodb.Table(os.environ["DOCUMENTS_TABLE_NAME"])
@@ -42,6 +43,7 @@ def update_document_status(
     document_id: str,
     status: str,
     error_message: Optional[str] = None,
+    chunk_count: Optional[int] = None,
 ) -> Dict[str, Any]:
     now = utc_now_iso()
     ingested_at = now if status == "READY" else None
@@ -53,18 +55,21 @@ def update_document_status(
         },
         UpdateExpression="""
             SET #status = :status,
-                errorMessage = :errorMessage,
-                ingestedAt = :ingestedAt,
-                updatedAt = :updatedAt
+            errorMessage = :errorMessage,
+            ingestedAt = :ingestedAt,
+            updatedAt = :updatedAt,
+            chunkCount = :chunkCount
         """,
         ExpressionAttributeNames={
             "#status": "status",
+
         },
         ExpressionAttributeValues={
             ":status": status,
             ":errorMessage": error_message,
             ":ingestedAt": ingested_at,
             ":updatedAt": now,
+            ":chunkCount": chunk_count,
         },
         ReturnValues="ALL_NEW",
     )

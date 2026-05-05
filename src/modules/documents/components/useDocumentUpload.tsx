@@ -96,26 +96,22 @@ export function useDocumentUpload({
       await uploadFileToS3(data.uploadUrl, file);
       setUploadProgress(100);
 
-     fetch(`/api/v1/documents/${documentId}/status`, {
-  method: "PATCH",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    workspaceId,
-    status,
-  }),
-});
+      const completeUploadRes = await fetch(
+        `/api/v1/documents/${documentId}/complete-upload`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            workspaceId,
+          }),
+        },
+      );
 
-      fetch(`/api/v1/documents/${documentId}/complete-upload`, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    workspaceId,
-  }),
-});
+      if (!completeUploadRes.ok) {
+        throw new Error("Failed to complete document upload");
+      }
 
       toast.success("Document uploaded successfully");
 
