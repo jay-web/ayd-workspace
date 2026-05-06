@@ -1,3 +1,4 @@
+import { UploadDocumentAction } from "@/modules/documents/components/UploadDocumentAction";
 import Link from "next/link";
 
 type QuickActionsCardProps = {
@@ -5,12 +6,7 @@ type QuickActionsCardProps = {
 };
 
 const actions = [
-  {
-    label: "Upload Document",
-    description: "Add new knowledge files",
-    icon: "↑",
-    hrefType: "documents",
-  },
+
   {
     label: "Open AI Chat",
     description: "Ask questions from docs",
@@ -27,7 +23,7 @@ const actions = [
 
 export function QuickActionsCard({ workspaceId }: QuickActionsCardProps) {
   return (
-    <aside className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-100 hover:shadow-lg">
+    <aside className="w-full sm:w-auto rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-100 hover:shadow-lg">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-950">
@@ -44,6 +40,7 @@ export function QuickActionsCard({ workspaceId }: QuickActionsCardProps) {
       </div>
 
       <div className="mt-4 space-y-2.5">
+         <UploadDocumentAction workspaceId={workspaceId} />
         {actions.map((action) => {
           const href =
             action.hrefType === "chat"
@@ -54,7 +51,7 @@ export function QuickActionsCard({ workspaceId }: QuickActionsCardProps) {
             <Link
               key={action.label}
               href={href}
-              className="group flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-white hover:shadow-md"
+              className="group w-full flex items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-3 py-3 shadow-sm transition-all duration-200 hover:border-emerald-200 hover:bg-white hover:shadow-md"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-sm text-[#0E5B48] shadow-sm transition group-hover:bg-[#0E5B48] group-hover:text-white">

@@ -11,9 +11,9 @@ export function WorkspaceDashboardHero({
 }: WorkspaceDashboardHeroProps) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-emerald-100 hover:shadow-lg">
-      <div className="flex items-center justify-between gap-5">
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-3xl shadow-sm">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+        <div className="flex min-w-0 items-start sm:items-center gap-4 w-full">
+          <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-3xl shadow-sm">
             🧪
           </div>
 
@@ -38,17 +38,17 @@ export function WorkspaceDashboardHero({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-3">
-          <Link
+        <div className="flex w-full sm:w-auto flex-col sm:flex-row sm:items-center gap-3">
+          {/* <Link
             href={`/workspaces/${workspaceId}/documents`}
             className="rounded-xl bg-[#0E5B48] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#0b4d3d] hover:shadow-md"
           >
             Upload Document
-          </Link>
+          </Link> */}
 
           <Link
             href={`/workspaces/${workspaceId}/chat`}
-            className="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-100 hover:bg-emerald-50/50 hover:text-[#0E5B48] hover:shadow-md"
+            className="w-full sm:w-auto rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-sm text-center transition hover:-translate-y-0.5 hover:border-emerald-100 hover:bg-emerald-50/50 hover:text-[#0E5B48] hover:shadow-md"
           >
             Open Chat
           </Link>

@@ -1,19 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { refreshSession } from "@/lib/auth/clientRefresh";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/Card";
 
 export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const redirect = searchParams.get("redirect");
 
   useEffect(() => {
     let active = true;
+
+    const searchParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const redirect = searchParams?.get("redirect");
 
     async function tryRefresh() {
       const ok = await refreshSession();
@@ -30,7 +30,7 @@ export default function LoginPage() {
     return () => {
       active = false;
     };
-  }, [router, redirect]);
+  }, [router]);
 
   const handleLogin = () => {
     window.location.href = "/api/auth/login";

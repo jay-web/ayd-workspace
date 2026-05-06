@@ -62,10 +62,10 @@ export default async function WorkspaceDocumentsPage({
   const counts = getStatusCounts(documents);
 
   return (
-    <section className="h-full min-h-0 overflow-y-auto bg-[#f6f8f7]">
+    <section className="h-full min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-full bg-[#f6f8f7]">
       <DocumentsAutoRefresh documents={documents} />
 
- <div className="min-h-full space-y-4 px-4 py-4">
+ <div className="min-h-full space-y-4 px-3 sm:px-4 py-3 sm:py-4 pb-24 md:pb-6 w-full max-w-full">
        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
          <h1 className="text-2xl font-semibold tracking-tight text-gray-950">

@@ -53,7 +53,7 @@ export default function DocumentsUploadCard({
   }
 
   return (
-    <div className="rounded-[32px] border border-gray-200 bg-white p-7 shadow-xl">
+    <div className="rounded-2xl sm:rounded-[32px] border border-gray-200 bg-white p-4 sm:p-7 shadow-xl">
       <input
         ref={inputRef}
         type="file"
@@ -63,11 +63,11 @@ export default function DocumentsUploadCard({
         disabled={uploading}
       />
 
-      <div className="mb-5">
+      <div className="mb-4 sm:mb-5">
         <h2 className="text-xl font-semibold text-gray-900">
           Upload Documents
         </h2>
-        <p className="mt-2 text-sm leading-6 text-gray-500 sm:text-base">
+        <p className="mt-2 text-sm leading-6 text-gray-500">
           Add files to this workspace to enable search and chat.
         </p>
       </div>
@@ -77,7 +77,7 @@ export default function DocumentsUploadCard({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group cursor-pointer rounded-[28px] border border-dashed px-6 py-12 text-center transition ${
+        className={`group cursor-pointer rounded-xl sm:rounded-[28px] border border-dashed px-4 sm:px-6 py-8 sm:py-12 text-center transition ${
           isDragging
             ? "border-gray-500 bg-gray-100"
             : "border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100"
@@ -94,7 +94,7 @@ export default function DocumentsUploadCard({
         <button
           type="button"
           disabled={uploading}
-          className="mt-4 inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-60"
+          className="mt-4 w-full sm:inline-flex items-center justify-center rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 disabled:opacity-60"
         >
           {uploading ? "Uploading..." : "Choose File"}
         </button>

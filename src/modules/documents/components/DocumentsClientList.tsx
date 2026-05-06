@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import DeleteDocumentsDialog from "./DeleteDocumentsDialog";
+import { formatFileSize } from "@/lib/utils";
 
 
 type DocumentListItem = {
@@ -38,21 +39,7 @@ function getStatusClasses(status: DocumentListItem["status"]) {
     }
 }
 
-function formatFileSize(sizeBytes?: number) {
-    if (!sizeBytes || sizeBytes <= 0) {
-        return "—";
-    }
 
-    if (sizeBytes < 1024) {
-        return `${sizeBytes} B`;
-    }
-
-    if (sizeBytes < 1024 * 1024) {
-        return `${(sizeBytes / 1024).toFixed(1)} KB`;
-    }
-
-    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export default function DocumentsClientList({
     workspaceId,
@@ -239,22 +226,22 @@ export default function DocumentsClientList({
         }
     }
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 w-full max-w-full overflow-x-hidden">
             <div className="rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
                     <input
                         value={searchQuery}
                         onChange={(event) => setSearchQuery(event.target.value)}
                         placeholder="Search documents..."
-                        className="h-10 flex-1 rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none focus:border-[#0E5B48] focus:bg-white"
+                        className="h-10 w-full rounded-xl border border-gray-200 bg-gray-50 px-4 text-sm text-gray-700 outline-none focus:border-[#0E5B48] focus:bg-white"
                     />
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:flex">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:flex">
                         <button
                             onClick={() =>
                                 setTypeFilter((current) => (current === "ALL" ? "PDF" : "ALL"))
                             }
-                            className="h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="w-full h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             {typeFilter === "ALL" ? "All Types" : "PDF Only"}
                         </button>
@@ -263,7 +250,7 @@ export default function DocumentsClientList({
                             onClick={() =>
                                 setSortOrder((current) => (current === "newest" ? "oldest" : "newest"))
                             }
-                            className="h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            className="w-full h-10 rounded-xl border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 hover:bg-gray-50"
                         >
                             {sortOrder === "newest" ? "Newest First" : "Oldest First"}
                         </button>
@@ -271,7 +258,7 @@ export default function DocumentsClientList({
                 </div>
             </div>
 
-            <div className="flex gap-2 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-sm">
+            <div className="flex gap-2 rounded-2xl border border-gray-200 bg-white p-2 shadow-sm overflow-x-auto whitespace-nowrap">
                 {tabs.map((tab) => {
                     const isActive = statusFilter === tab.value;
 
@@ -279,14 +266,14 @@ export default function DocumentsClientList({
                         <button
                             key={tab.value}
                             onClick={() => setStatusFilter(tab.value)}
-                            className={`shrink-0 rounded-xl px-3 py-1.5 text-sm font-semibold ${isActive
+                            className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold ${isActive
                                 ? "bg-[#0E5B48] text-white"
                                 : "text-gray-600 hover:bg-gray-50"
                                 }`}
                         >
-                            {tab.label}{" "}
+                            {tab.label} {" "}
                             <span
-                                className={`ml-1 rounded-full px-2 py-0.5 text-xs ${isActive
+                                className={`ml-1 rounded-full px-2 py-0.5 text-[11px] ${isActive
                                     ? "bg-white/20 text-white"
                                     : "bg-gray-100 text-gray-500"
                                     }`}
@@ -336,9 +323,78 @@ export default function DocumentsClientList({
                             Try another search or status filter.
                         </p>
                     </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full text-left text-sm">
+                                ) : (
+                                        <>
+                                            {/* Mobile stacked list */}
+                                              <div className="space-y-3 sm:hidden w-full max-w-full">
+                                                {filteredDocuments.map((doc) => {
+                                                    const isReady = doc.status === "READY";
+                                                    const isSelected = selectedIds.includes(doc.documentId);
+
+                                                    return (
+                                                        <div
+                                                            key={doc.documentId}
+                                                            className="rounded-2xl border border-gray-200 bg-white p-3 w-full max-w-full min-w-0"
+                                                        >
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="flex items-start gap-3 min-w-0">
+                                                                    <input
+                                                                        checked={isSelected}
+                                                                        onChange={() => toggleDocument(doc.documentId)}
+                                                                        type="checkbox"
+                                                                        className="mt-1 h-4 w-4 shrink-0 rounded border border-gray-300 accent-[#0E5B48]"
+                                                                    />
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="truncate text-sm font-semibold text-gray-950">
+                                                                            {doc.name}
+                                                                        </p>
+                                                                        <p className="mt-1 text-xs text-gray-500">
+                                                                            {doc.status} • {formatFileSize(doc.sizeBytes)}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
+                                                                    <button
+                                                                        onClick={() => handleViewDocument(doc.documentId)}
+                                                                        className="inline-flex h-8 items-center justify-center rounded-md border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                                                    >
+                                                                        View
+                                                                    </button>
+
+                                                                    {isReady ? (
+                                                                        <Link
+                                                                            href={`/workspaces/${workspaceId}/chat?documentId=${doc.documentId}`}
+                                                                            className="inline-flex h-8 items-center justify-center rounded-md bg-[#0E5B48] px-2 py-1 text-xs font-semibold text-white hover:bg-[#0b493a]"
+                                                                        >
+                                                                            Ask
+                                                                        </Link>
+                                                                    ) : (
+                                                                        <button
+                                                                            disabled
+                                                                            className="inline-flex h-8 items-center justify-center rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-400"
+                                                                        >
+                                                                            Ask
+                                                                        </button>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 flex-wrap">
+                                                                <div className="min-w-0 truncate">
+                                                                    {doc.chunkCount ? `${doc.chunkCount} chunks` : "—"}
+                                                                </div>
+                                                                <div className="whitespace-nowrap">{new Date(doc.createdAt).toLocaleString()}</div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Desktop/tablet table */}
+                                            <div className="hidden sm:block overflow-x-auto">
+                                                <table className="min-w-full text-left text-sm">
                             <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
                                 <tr>
                                     <th className="w-14 px-0 py-2.5 text-center">
@@ -450,7 +506,8 @@ export default function DocumentsClientList({
                                 })}
                             </tbody>
                         </table>
-                    </div>
+                                            </div>
+                                            </>
                 )}
             </div>
             <DeleteDocumentsDialog
