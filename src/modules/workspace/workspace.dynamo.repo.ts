@@ -1,4 +1,4 @@
-import { GetCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
+import { GetCommand, PutCommand, QueryCommand, TransactWriteCommand } from "@aws-sdk/lib-dynamodb";
 
 import { randomUUID } from "crypto";
 
@@ -128,4 +128,70 @@ export async function listWorkspacesForUser(userId: string) {
   return workspaces.filter((workspace): workspace is WorkspaceItem =>
     Boolean(workspace)
   );
+}
+
+export async function addWorkspaceMember(input: {
+  workspaceId: string;
+  userId: string;
+  role: Exclude<WorkspaceRole, "OWNER">;
+}) {
+  const now = new Date().toISOString();
+
+  const member: WorkspaceMemberItem = {
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    role: input.role,
+    joinedAt: now,
+  };
+
+  await dynamo.send(
+    new PutCommand({
+      TableName: dynamoTables.workspaceMembers,
+      Item: member,
+      ConditionExpression:
+        "attribute_not_exists(workspaceId) AND attribute_not_exists(userId)",
+    })
+  );
+
+  return member;
+}
+
+export async function getWorkspaceMember(input: {
+  workspaceId: string;
+  userId: string;
+}) {
+  const result = await dynamo.send(
+    new GetCommand({
+      TableName: dynamoTables.workspaceMembers,
+      Key: workspaceMemberKey(input.workspaceId, input.userId),
+    })
+  );
+
+  return (result.Item as WorkspaceMemberItem | undefined) ?? null;
+}
+
+export async function isWorkspaceOwner(input: {
+  workspaceId: string;
+  userId: string;
+}) {
+  const member = await getWorkspaceMember({
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+  });
+
+  return member?.role === "OWNER";
+}
+
+export async function listWorkspaceMembers(workspaceId: string) {
+  const result = await dynamo.send(
+    new QueryCommand({
+      TableName: dynamoTables.workspaceMembers,
+      KeyConditionExpression: "workspaceId = :workspaceId",
+      ExpressionAttributeValues: {
+        ":workspaceId": workspaceId,
+      },
+    })
+  );
+
+  return (result.Items ?? []) as WorkspaceMemberItem[];
 }
