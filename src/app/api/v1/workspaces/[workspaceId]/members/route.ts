@@ -8,6 +8,7 @@ import {
   listWorkspaceMembers,
 } from "@/modules/workspace/workspace.dynamo.repo";
 import { ConditionalCheckFailedException } from "@aws-sdk/client-dynamodb";
+import { getUserByEmail } from "@/modules/users/user.repo";
 
 type RouteContext = {
   params: Promise<{
@@ -37,11 +38,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
 
   const body = await req.json();
 
-  const userId = body.userId;
+  const email = body.email;
   const role = body.role;
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
+  if (!email) {
+    return NextResponse.json({ error: "email is required" }, { status: 400 });
   }
 
   if (role !== "EDITOR" && role !== "VIEWER") {
@@ -51,10 +52,20 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
     );
   }
 
+  const targetUser = await getUserByEmail(email);
+
+  if (!targetUser) {
+    return NextResponse.json(
+      { error: "No AYD user found with this email" },
+      { status: 404 },
+    );
+  }
+
   try {
     const member = await addWorkspaceMember({
       workspaceId,
-      userId,
+      userId: targetUser.userId,
+      email: targetUser.email,
       role,
     });
 
@@ -82,15 +93,11 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   }
 }
 
-
 export async function GET(req: NextRequest, { params }: RouteContext) {
   const session = await getSession(req);
 
   if (!session?.userId) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const { workspaceId } = await params;
@@ -103,7 +110,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   if (!currentUserIsMember) {
     return NextResponse.json(
       { error: "You are not a member of this workspace" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 

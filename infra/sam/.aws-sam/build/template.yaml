@@ -133,6 +133,27 @@ Resources:
           KeyType: RANGE
         Projection:
           ProjectionType: ALL
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName:
+        Fn::Sub: ayd-users-${Environment}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+      - AttributeName: userId
+        AttributeType: S
+      - AttributeName: email
+        AttributeType: S
+      KeySchema:
+      - AttributeName: userId
+        KeyType: HASH
+      GlobalSecondaryIndexes:
+      - IndexName: UserEmailIndex
+        KeySchema:
+        - AttributeName: email
+          KeyType: HASH
+        Projection:
+          ProjectionType: ALL
   DocumentsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -248,9 +269,13 @@ Resources:
             - WorkspaceMembersTable
             - Arn
           - Fn::GetAtt:
+            - UsersTable
+            - Arn
+          - Fn::GetAtt:
             - DocumentsTable
             - Arn
           - Fn::Sub: ${WorkspaceMembersTable.Arn}/index/UserWorkspacesIndex
+          - Fn::Sub: ${UsersTable.Arn}/index/UserEmailIndex
           - Fn::Sub: ${DocumentsTable.Arn}/index/DocumentStorageKeyIndex
       Environment:
         Variables:
@@ -271,9 +296,12 @@ Resources:
             Ref: WorkspacesTable
           WORKSPACE_MEMBERS_TABLE_NAME:
             Ref: WorkspaceMembersTable
+          USERS_TABLE_NAME:
+            Ref: UsersTable
           DOCUMENTS_TABLE_NAME:
             Ref: DocumentsTable
           USER_WORKSPACES_INDEX_NAME: UserWorkspacesIndex
+          USER_EMAIL_INDEX_NAME: UserEmailIndex
           DOCUMENT_STORAGE_KEY_INDEX_NAME: DocumentStorageKeyIndex
           DOCUMENT_CHUNKS_TABLE:
             Ref: DocumentChunksTable
@@ -348,6 +376,9 @@ Outputs:
   WorkspaceMembersTableName:
     Value:
       Ref: WorkspaceMembersTable
+  UsersTableName:
+    Value:
+      Ref: UsersTable
   DocumentsTableName:
     Value:
       Ref: DocumentsTable

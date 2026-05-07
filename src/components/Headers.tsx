@@ -94,6 +94,8 @@ export default function Header() {
         <p className="mt-1 truncate text-sm font-medium text-gray-800">
           {user?.email || "No email found"}
         </p>
+
+        {/* Only show email and logout — do not expose userId */}
       </div>
 
       <button

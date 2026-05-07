@@ -1,4 +1,7 @@
+"use client";
 import Link from "next/link";
+import { useState } from "react";
+import { WorkspaceMembersDialog } from "../WorkspaceMembersDialog";
 
 type WorkspaceDashboardHeroProps = {
   workspaceId: string;
@@ -9,6 +12,7 @@ export function WorkspaceDashboardHero({
   workspaceId,
   workspaceName,
 }: WorkspaceDashboardHeroProps) {
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-emerald-100 hover:shadow-lg">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
@@ -38,22 +42,28 @@ export function WorkspaceDashboardHero({
           </div>
         </div>
 
-        <div className="flex w-full sm:w-auto flex-col sm:flex-row sm:items-center gap-3">
-          {/* <Link
-            href={`/workspaces/${workspaceId}/documents`}
-            className="rounded-xl bg-[#0E5B48] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#0b4d3d] hover:shadow-md"
+        <div className="flex w-full flex-row items-center justify-end gap-2 sm:w-auto">
+          <button
+            type="button"
+            onClick={() => setIsMembersOpen(true)}
+            className="inline-flex h-9 items-center justify-center cursor-pointer whitespace-nowrap rounded-lg border border-gray-200 bg-white px-3.5 text-xs font-semibold text-gray-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
           >
-            Upload Document
-          </Link> */}
+            Manage Members
+          </button>
 
           <Link
             href={`/workspaces/${workspaceId}/chat`}
-            className="w-full sm:w-auto rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-semibold text-gray-800 shadow-sm text-center transition hover:-translate-y-0.5 hover:border-emerald-100 hover:bg-emerald-50/50 hover:text-[#0E5B48] hover:shadow-md"
+            className="inline-flex h-9 items-center cursor-pointer justify-center whitespace-nowrap rounded-lg bg-[#0E5B48] px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-[#0b4d3d] hover:shadow-md"
           >
             Open Chat
           </Link>
         </div>
       </div>
+      <WorkspaceMembersDialog
+        workspaceId={workspaceId}
+        isOpen={isMembersOpen}
+        onClose={() => setIsMembersOpen(false)}
+      />
     </div>
   );
 }

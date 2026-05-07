@@ -132,6 +132,27 @@ Resources:
           Projection:
             ProjectionType: ALL
 
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub "ayd-users-${Environment}"
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: UserEmailIndex
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
   DocumentsTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -246,8 +267,10 @@ Resources:
               Resource:
                 - !GetAtt WorkspacesTable.Arn
                 - !GetAtt WorkspaceMembersTable.Arn
+                - !GetAtt UsersTable.Arn
                 - !GetAtt DocumentsTable.Arn
                 - !Sub "${WorkspaceMembersTable.Arn}/index/UserWorkspacesIndex"
+                - !Sub "${UsersTable.Arn}/index/UserEmailIndex"
                 - !Sub "${DocumentsTable.Arn}/index/DocumentStorageKeyIndex"
 
       Environment:
@@ -265,8 +288,10 @@ Resources:
 
           WORKSPACES_TABLE_NAME: !Ref WorkspacesTable
           WORKSPACE_MEMBERS_TABLE_NAME: !Ref WorkspaceMembersTable
+          USERS_TABLE_NAME: !Ref UsersTable
           DOCUMENTS_TABLE_NAME: !Ref DocumentsTable
           USER_WORKSPACES_INDEX_NAME: UserWorkspacesIndex
+          USER_EMAIL_INDEX_NAME: UserEmailIndex
           DOCUMENT_STORAGE_KEY_INDEX_NAME: DocumentStorageKeyIndex
           DOCUMENT_CHUNKS_TABLE: !Ref DocumentChunksTable
 
@@ -293,7 +318,7 @@ Resources:
           APP_ENV: !Ref Environment
           LOG_LEVEL: INFO
           DOCUMENTS_BUCKET_NAME: !Ref DocumentBucketName
-  
+
   DocumentChunksTable:
     Type: AWS::DynamoDB::Table
     Properties:
@@ -330,6 +355,9 @@ Outputs:
 
   WorkspaceMembersTableName:
     Value: !Ref WorkspaceMembersTable
+
+  UsersTableName:
+    Value: !Ref UsersTable
 
   DocumentsTableName:
     Value: !Ref DocumentsTable

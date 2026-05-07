@@ -24,6 +24,7 @@ export type WorkspaceItem = {
 export type WorkspaceMemberItem = {
   workspaceId: string;
   userId: string;
+  email?: string;
   role: WorkspaceRole;
   joinedAt: string;
 };
@@ -133,16 +134,18 @@ export async function listWorkspacesForUser(userId: string) {
 export async function addWorkspaceMember(input: {
   workspaceId: string;
   userId: string;
+  email?: string;
   role: Exclude<WorkspaceRole, "OWNER">;
 }) {
   const now = new Date().toISOString();
 
-  const member: WorkspaceMemberItem = {
-    workspaceId: input.workspaceId,
-    userId: input.userId,
-    role: input.role,
-    joinedAt: now,
-  };
+const member: WorkspaceMemberItem = {
+  workspaceId: input.workspaceId,
+  userId: input.userId,
+  ...(input.email ? { email: input.email } : {}),
+  role: input.role,
+  joinedAt: now,
+};
 
   await dynamo.send(
     new PutCommand({
