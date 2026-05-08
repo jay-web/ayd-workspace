@@ -10,6 +10,9 @@ import {
   workspaceKey,
   workspaceMemberKey,
 } from "@/lib/aws/dynamodb.tables";
+import { deleteDocumentsByWorkspace } from "../documents/document.dynamo.repo";
+import { deleteS3Objects } from "@/lib/aws/s3";
+import { deleteVectorsByKeys } from "@/lib/vector/searchVectors";
 
 export type WorkspaceRole = "OWNER" | "EDITOR" | "VIEWER";
 
@@ -100,7 +103,6 @@ export async function isWorkspaceMember(input: {
 
   return Boolean(result.Item);
 }
-
 export async function listWorkspacesForUser(userId: string) {
   const result = await dynamo.send(
     new QueryCommand({
@@ -121,14 +123,22 @@ export async function listWorkspacesForUser(userId: string) {
   }
 
   const workspaces = await Promise.all(
-    memberships.map((membership) =>
-      getWorkspaceById(membership.workspaceId)
-    )
+    memberships.map(async (membership) => {
+      const workspace = await getWorkspaceById(membership.workspaceId);
+
+      if (!workspace) {
+        return null;
+      }
+
+      return {
+        ...workspace,
+        role: membership.role,
+        joinedAt: membership.joinedAt,
+      };
+    })
   );
 
-  return workspaces.filter((workspace): workspace is WorkspaceItem =>
-    Boolean(workspace)
-  );
+  return workspaces.filter(Boolean);
 }
 
 export async function addWorkspaceMember(input: {
@@ -197,4 +207,43 @@ export async function listWorkspaceMembers(workspaceId: string) {
   );
 
   return (result.Items ?? []) as WorkspaceMemberItem[];
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+  const deletedDocuments = await deleteDocumentsByWorkspace(workspaceId);
+
+  await deleteVectorsByKeys(deletedDocuments.vectorKeys);
+
+  await deleteS3Objects(
+  process.env.S3_BUCKET_NAME!,
+  deletedDocuments.storageKeys
+);
+
+  const members = await listWorkspaceMembers(workspaceId);
+
+  await dynamo.send(
+    new TransactWriteCommand({
+      TransactItems: [
+        {
+          Delete: {
+            TableName: dynamoTables.workspaces,
+            Key: workspaceKey(workspaceId),
+          },
+        },
+        ...members.map((member) => ({
+          Delete: {
+            TableName: dynamoTables.workspaceMembers,
+            Key: workspaceMemberKey(member.workspaceId, member.userId),
+          },
+        })),
+      ],
+    })
+  );
+
+  return {
+    deletedWorkspaceId: workspaceId,
+    deletedDocumentsCount: deletedDocuments.deletedDocumentsCount,
+    vectorKeys: deletedDocuments.vectorKeys,
+    storageKeys: deletedDocuments.storageKeys,
+  };
 }

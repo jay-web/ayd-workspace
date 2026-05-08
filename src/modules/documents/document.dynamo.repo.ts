@@ -233,3 +233,33 @@ const vectorKeys = chunks
   vectorKeys,
 };
 }
+
+export async function deleteDocumentsByWorkspace(workspaceId: string) {
+  const documents = await listDocumentsByWorkspace(workspaceId);
+
+  const vectorKeys: string[] = [];
+  const storageKeys: string[] = [];
+
+  for (const document of documents) {
+    if (document.storageKey) {
+      storageKeys.push(document.storageKey);
+    }
+
+    const deletedChunks = await deleteDocumentChunksByDocumentId(
+      document.documentId
+    );
+
+    vectorKeys.push(...deletedChunks.vectorKeys);
+
+    await deleteDocumentById({
+      workspaceId: document.workspaceId,
+      documentId: document.documentId,
+    });
+  }
+
+  return {
+    deletedDocumentsCount: documents.length,
+    vectorKeys,
+    storageKeys,
+  };
+}

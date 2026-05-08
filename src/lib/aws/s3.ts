@@ -1,4 +1,4 @@
-import { S3Client,GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client,GetObjectCommand, DeleteObjectsCommand } from "@aws-sdk/client-s3";
 
 export const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -29,5 +29,41 @@ export async function readS3ObjectBuffer(bucket: string, key: string) {
     contentType: result.ContentType ?? null,
     contentLength: result.ContentLength ?? bytes.length,
     eTag: result.ETag ?? null,
+  };
+}
+
+export async function deleteS3Objects(bucket: string, keys: string[]) {
+  const uniqueKeys = Array.from(new Set(keys)).filter(Boolean);
+
+  if (uniqueKeys.length === 0) {
+    return {
+      deletedCount: 0,
+    };
+  }
+
+  const chunks: string[][] = [];
+
+  for (let i = 0; i < uniqueKeys.length; i += 1000) {
+    chunks.push(uniqueKeys.slice(i, i + 1000));
+  }
+
+  let deletedCount = 0;
+
+  for (const chunk of chunks) {
+    await s3Client.send(
+      new DeleteObjectsCommand({
+        Bucket: bucket,
+        Delete: {
+          Objects: chunk.map((key) => ({ Key: key })),
+          Quiet: true,
+        },
+      })
+    );
+
+    deletedCount += chunk.length;
+  }
+
+  return {
+    deletedCount,
   };
 }

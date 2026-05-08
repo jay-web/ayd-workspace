@@ -3,6 +3,7 @@ import {
   QueryVectorsCommand,
   type QueryVectorsCommandInput,
   type QueryOutputVector,
+  DeleteVectorsCommand,
 } from "@aws-sdk/client-s3vectors";
 
 const s3Vectors = new S3VectorsClient({
@@ -74,3 +75,38 @@ export async function searchVectors({
 
   return response.vectors ?? [];
 }
+
+export async function deleteVectorsByKeys(vectorKeys: string[]) {
+  const uniqueVectorKeys = Array.from(new Set(vectorKeys)).filter(Boolean);
+
+  if (uniqueVectorKeys.length === 0) {
+    return {
+      deletedCount: 0,
+    };
+  }
+
+  const chunks: string[][] = [];
+
+  for (let i = 0; i < uniqueVectorKeys.length; i += 500) {
+    chunks.push(uniqueVectorKeys.slice(i, i + 500));
+  }
+
+  let deletedCount = 0;
+
+  for (const chunk of chunks) {
+    await s3Vectors.send(
+      new DeleteVectorsCommand({
+        vectorBucketName: process.env.S3_VECTOR_BUCKET_NAME!,
+        indexName: process.env.S3_VECTOR_INDEX_NAME!,
+        keys: chunk,
+      })
+    );
+
+    deletedCount += chunk.length;
+  }
+
+  return {
+    deletedCount,
+  };
+}
+
