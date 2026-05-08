@@ -24,12 +24,18 @@ type DocumentsClientListProps = {
     workspaceId: string;
     documents: DocumentListItem[];
 };
+const POLLING_STATUSES: DocumentStatus[] = [
+    "UPLOADING",
+    "UPLOADED",
+    "PROCESSING",
+];
 
 function getStatusClasses(status: DocumentListItem["status"]) {
     switch (status) {
         case "READY":
             return "border-emerald-200 bg-emerald-50 text-emerald-700";
         case "PROCESSING":
+        case "UPLOADED":
             return "border-amber-200 bg-amber-50 text-amber-700";
         case "FAILED":
             return "border-red-200 bg-red-50 text-red-700";
@@ -58,13 +64,26 @@ export default function DocumentsClientList({
     useEffect(() => {
         setDocumentItems(documents);
     }, [documents]);
+    useEffect(() => {
+        const hasPendingDocuments = documentItems.some((document) =>
+            POLLING_STATUSES.includes(document.status)
+        );
+
+        if (!hasPendingDocuments) return;
+
+        const interval = setInterval(() => {
+            router.refresh();
+        }, 4000);
+
+        return () => clearInterval(interval);
+    }, [documentItems, router]);
 
     const counts = useMemo(() => {
         return {
             total: documentItems.length,
             ready: documentItems.filter((doc) => doc.status === "READY").length,
-            processing: documentItems.filter(
-                (doc) => doc.status === "PROCESSING" || doc.status === "UPLOADING"
+            processing: documentItems.filter((doc) =>
+                POLLING_STATUSES.includes(doc.status)
             ).length,
             failed: documentItems.filter((doc) => doc.status === "FAILED").length,
         };
@@ -82,8 +101,8 @@ export default function DocumentsClientList({
                 statusFilter === "ALL"
                     ? true
                     : statusFilter === "PROCESSING"
-                        ? doc.status === "PROCESSING" || doc.status === "UPLOADING"
-                        : doc.status === statusFilter;
+                ? POLLING_STATUSES.includes(doc.status)
+                : doc.status === statusFilter;
 
             const matchesType =
                 typeFilter === "ALL" ? true : doc.name.toLowerCase().endsWith(".pdf");
@@ -292,7 +311,7 @@ export default function DocumentsClientList({
                             All Documents
                         </h2>
                         <p className="mt-1 text-xs text-gray-500">
-                            Showing {filteredDocuments.length} of {documents.length} documents
+                            Showing {filteredDocuments.length} of {documentItems.length} documents
                         </p>
                     </div>
 
@@ -323,191 +342,191 @@ export default function DocumentsClientList({
                             Try another search or status filter.
                         </p>
                     </div>
-                                ) : (
-                                        <>
-                                            {/* Mobile stacked list */}
-                                              <div className="space-y-3 sm:hidden w-full max-w-full">
-                                                {filteredDocuments.map((doc) => {
-                                                    const isReady = doc.status === "READY";
-                                                    const isSelected = selectedIds.includes(doc.documentId);
+                ) : (
+                    <>
+                        {/* Mobile stacked list */}
+                        <div className="space-y-3 sm:hidden w-full max-w-full">
+                            {filteredDocuments.map((doc) => {
+                                const isReady = doc.status === "READY";
+                                const isSelected = selectedIds.includes(doc.documentId);
 
-                                                    return (
-                                                        <div
-                                                            key={doc.documentId}
-                                                            className="rounded-2xl border border-gray-200 bg-white p-3 w-full max-w-full min-w-0"
-                                                        >
-                                                            <div className="flex items-start justify-between gap-3">
-                                                                <div className="flex items-start gap-3 min-w-0">
-                                                                    <input
-                                                                        checked={isSelected}
-                                                                        onChange={() => toggleDocument(doc.documentId)}
-                                                                        type="checkbox"
-                                                                        className="mt-1 h-4 w-4 shrink-0 rounded border border-gray-300 accent-[#0E5B48]"
-                                                                    />
-
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <p className="truncate text-sm font-semibold text-gray-950">
-                                                                            {doc.name}
-                                                                        </p>
-                                                                        <p className="mt-1 text-xs text-gray-500">
-                                                                            {doc.status} • {formatFileSize(doc.sizeBytes)}
-                                                                        </p>
-                                                                    </div>
-                                                                </div>
-
-                                                                <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
-                                                                    <button
-                                                                        onClick={() => handleViewDocument(doc.documentId)}
-                                                                        className="inline-flex h-8 items-center justify-center rounded-md border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                                                                    >
-                                                                        View
-                                                                    </button>
-
-                                                                    {isReady ? (
-                                                                        <Link
-                                                                            href={`/workspaces/${workspaceId}/chat?documentId=${doc.documentId}`}
-                                                                            className="inline-flex h-8 items-center justify-center rounded-md bg-[#0E5B48] px-2 py-1 text-xs font-semibold text-white hover:bg-[#0b493a]"
-                                                                        >
-                                                                            Ask
-                                                                        </Link>
-                                                                    ) : (
-                                                                        <button
-                                                                            disabled
-                                                                            className="inline-flex h-8 items-center justify-center rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-400"
-                                                                        >
-                                                                            Ask
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="mt-3 flex items-center justify-between text-xs text-gray-500 flex-wrap">
-                                                                <div className="min-w-0 truncate">
-                                                                    {doc.chunkCount ? `${doc.chunkCount} chunks` : "—"}
-                                                                </div>
-                                                                <div className="whitespace-nowrap">{new Date(doc.createdAt).toLocaleString()}</div>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-
-                                            {/* Desktop/tablet table */}
-                                            <div className="hidden sm:block overflow-x-auto">
-                                                <table className="min-w-full text-left text-sm">
-                            <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                <tr>
-                                    <th className="w-14 px-0 py-2.5 text-center">
-                                        <input
-                                            checked={allVisibleSelected}
-                                            onChange={toggleAllVisible}
-                                            type="checkbox"
-                                            className="mx-auto block h-4 w-4 cursor-pointer rounded border border-gray-300 accent-[#0E5B48] transition duration-150 hover:scale-105 focus:ring-2 focus:ring-[#0E5B48]/20"
-                                        />
-                                    </th>
-                                    <th className="px-4 py-2.5">Document</th>
-                                    <th className="px-4 py-2.5">Status</th>
-                                    <th className="px-4 py-2.5">Updated</th>
-                                    <th className="px-4 py-2.5">Size / Chunks</th>
-                                    <th className="px-5 py-2.5 text-right">Actions</th>
-                                </tr>
-                            </thead>
-
-                            <tbody className="divide-y divide-gray-100">
-                                {filteredDocuments.map((doc) => {
-                                    const isReady = doc.status === "READY";
-                                    const isSelected = selectedIds.includes(doc.documentId);
-
-                                    return (
-                                        <tr key={doc.documentId} className="hover:bg-gray-50">
-                                            <td className="w-14 px-0 py-3 text-center">
+                                return (
+                                    <div
+                                        key={doc.documentId}
+                                        className="rounded-2xl border border-gray-200 bg-white p-3 w-full max-w-full min-w-0"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex items-start gap-3 min-w-0">
                                                 <input
                                                     checked={isSelected}
                                                     onChange={() => toggleDocument(doc.documentId)}
                                                     type="checkbox"
-                                                    className="mx-auto block h-4 w-4 cursor-pointer rounded border border-gray-300 accent-[#0E5B48] transition duration-150 hover:scale-105 focus:ring-2 focus:ring-[#0E5B48]/20"
+                                                    className="mt-1 h-4 w-4 shrink-0 rounded border border-gray-300 accent-[#0E5B48]"
                                                 />
-                                            </td>
 
-                                            <td className="min-w-[280px] px-4 py-3">
-                                                <div className="flex min-w-0 items-center gap-3">
-                                                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[11px] font-bold text-red-600">
-                                                        PDF
-                                                    </div>
-
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-semibold text-gray-950">
-                                                            {doc.name}
-                                                        </p>
-                                                        <p className="mt-1 text-xs text-gray-500">
-                                                            PDF document
-                                                        </p>
-                                                    </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-sm font-semibold text-gray-950">
+                                                        {doc.name}
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        {doc.status} • {formatFileSize(doc.sizeBytes)}
+                                                    </p>
                                                 </div>
-                                            </td>
-
-                                            <td className="px-4 py-3">
-                                                <span
-                                                    className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusClasses(
-                                                        doc.status
-                                                    )}`}
-                                                >
-                                                    {doc.status}
-                                                </span>
-                                            </td>
-
-                                            <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
-                                                {new Date(doc.createdAt).toLocaleString()}
-                                            </td>
-
-                                            <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
-                                                {formatFileSize(doc.sizeBytes)}
-                                                <span className="mx-1 text-gray-300">/</span>
-                                                {doc.chunkCount ? `${doc.chunkCount} chunks` : "—"}
-                                            </td>
-
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => handleViewDocument(doc.documentId)}
-                                                        className="inline-flex h-9 min-w-[56px] cursor-pointer items-center justify-center rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50"
-                                                    >
-                                                        View
-                                                    </button>
-
-                                                    {isReady ? (
-                                                        <Link
-                                                            href={`/workspaces/${workspaceId}/chat?documentId=${doc.documentId}`}
-                                                            className="inline-flex h-9 min-w-[64px] items-center justify-center rounded-lg bg-[#0E5B48] px-3 text-xs font-semibold text-white hover:bg-[#0b493a]"
-                                                        >
-                                                            Ask AI
-                                                        </Link>
-                                                    ) : (
-                                                        <button
-                                                            disabled
-                                                            className="inline-flex h-9 min-w-[64px] cursor-not-allowed items-center justify-center rounded-lg bg-gray-100 px-3 text-xs font-semibold text-gray-400"
-                                                        >
-                                                            Ask AI
-                                                        </button>
-                                                    )}
-
-                                                    <button
-                                                        onClick={() => openDeleteDialog([doc.documentId])}
-                                                        aria-label="Delete document"
-                                                        title="Delete document"
-                                                        className="inline-flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg border border-gray-200 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
                                             </div>
-                                            </>
+
+                                            <div className="shrink-0 flex items-center gap-2 whitespace-nowrap">
+                                                <button
+                                                    onClick={() => handleViewDocument(doc.documentId)}
+                                                    className="inline-flex h-8 items-center justify-center rounded-md border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                                >
+                                                    View
+                                                </button>
+
+                                                {isReady ? (
+                                                    <Link
+                                                        href={`/workspaces/${workspaceId}/chat?documentId=${doc.documentId}`}
+                                                        className="inline-flex h-8 items-center justify-center rounded-md bg-[#0E5B48] px-2 py-1 text-xs font-semibold text-white hover:bg-[#0b493a]"
+                                                    >
+                                                        Ask
+                                                    </Link>
+                                                ) : (
+                                                    <button
+                                                        disabled
+                                                        className="inline-flex h-8 items-center justify-center rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-400"
+                                                    >
+                                                        Ask
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 flex items-center justify-between text-xs text-gray-500 flex-wrap">
+                                            <div className="min-w-0 truncate">
+                                                {doc.chunkCount ? `${doc.chunkCount} chunks` : "—"}
+                                            </div>
+                                            <div className="whitespace-nowrap">{new Date(doc.createdAt).toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Desktop/tablet table */}
+                        <div className="hidden sm:block overflow-x-auto">
+                            <table className="min-w-full text-left text-sm">
+                                <thead className="bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    <tr>
+                                        <th className="w-14 px-0 py-2.5 text-center">
+                                            <input
+                                                checked={allVisibleSelected}
+                                                onChange={toggleAllVisible}
+                                                type="checkbox"
+                                                className="mx-auto block h-4 w-4 cursor-pointer rounded border border-gray-300 accent-[#0E5B48] transition duration-150 hover:scale-105 focus:ring-2 focus:ring-[#0E5B48]/20"
+                                            />
+                                        </th>
+                                        <th className="px-4 py-2.5">Document</th>
+                                        <th className="px-4 py-2.5">Status</th>
+                                        <th className="px-4 py-2.5">Updated</th>
+                                        <th className="px-4 py-2.5">Size / Chunks</th>
+                                        <th className="px-5 py-2.5 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody className="divide-y divide-gray-100">
+                                    {filteredDocuments.map((doc) => {
+                                        const isReady = doc.status === "READY";
+                                        const isSelected = selectedIds.includes(doc.documentId);
+
+                                        return (
+                                            <tr key={doc.documentId} className="hover:bg-gray-50">
+                                                <td className="w-14 px-0 py-3 text-center">
+                                                    <input
+                                                        checked={isSelected}
+                                                        onChange={() => toggleDocument(doc.documentId)}
+                                                        type="checkbox"
+                                                        className="mx-auto block h-4 w-4 cursor-pointer rounded border border-gray-300 accent-[#0E5B48] transition duration-150 hover:scale-105 focus:ring-2 focus:ring-[#0E5B48]/20"
+                                                    />
+                                                </td>
+
+                                                <td className="min-w-[280px] px-4 py-3">
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-50 text-[11px] font-bold text-red-600">
+                                                            PDF
+                                                        </div>
+
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-semibold text-gray-950">
+                                                                {doc.name}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                PDF document
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                <td className="px-4 py-3">
+                                                    <span
+                                                        className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-semibold ${getStatusClasses(
+                                                            doc.status
+                                                        )}`}
+                                                    >
+                                                        {doc.status}
+                                                    </span>
+                                                </td>
+
+                                                <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
+                                                    {new Date(doc.createdAt).toLocaleString()}
+                                                </td>
+
+                                                <td className="whitespace-nowrap px-4 py-3 text-xs text-gray-500">
+                                                    {formatFileSize(doc.sizeBytes)}
+                                                    <span className="mx-1 text-gray-300">/</span>
+                                                    {doc.chunkCount ? `${doc.chunkCount} chunks` : "—"}
+                                                </td>
+
+                                                <td className="px-4 py-3">
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleViewDocument(doc.documentId)}
+                                                            className="inline-flex h-9 min-w-[56px] cursor-pointer items-center justify-center rounded-lg border border-gray-200 px-3 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                                        >
+                                                            View
+                                                        </button>
+
+                                                        {isReady ? (
+                                                            <Link
+                                                                href={`/workspaces/${workspaceId}/chat?documentId=${doc.documentId}`}
+                                                                className="inline-flex h-9 min-w-[64px] items-center justify-center rounded-lg bg-[#0E5B48] px-3 text-xs font-semibold text-white hover:bg-[#0b493a]"
+                                                            >
+                                                                Ask AI
+                                                            </Link>
+                                                        ) : (
+                                                            <button
+                                                                disabled
+                                                                className="inline-flex h-9 min-w-[64px] cursor-not-allowed items-center justify-center rounded-lg bg-gray-100 px-3 text-xs font-semibold text-gray-400"
+                                                            >
+                                                                Ask AI
+                                                            </button>
+                                                        )}
+
+                                                        <button
+                                                            onClick={() => openDeleteDialog([doc.documentId])}
+                                                            aria-label="Delete document"
+                                                            title="Delete document"
+                                                            className="inline-flex h-9 w-9 items-center justify-center cursor-pointer rounded-lg border border-gray-200 text-gray-400 hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 )}
             </div>
             <DeleteDocumentsDialog

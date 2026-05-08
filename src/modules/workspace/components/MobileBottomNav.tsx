@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, FileText, MessageSquare } from "lucide-react";
+import { LayoutDashboard, FileText, MessageSquare, PanelLeftOpen } from "lucide-react";
 
 type MobileBottomNavProps = {
   workspaceId: string;
@@ -13,9 +13,14 @@ export function MobileBottomNav({ workspaceId }: MobileBottomNavProps) {
 
   const items = [
     {
-      href: `/workspaces/${workspaceId}`,
+      href: `/workspaces`,
       label: "Dashboard",
       Icon: LayoutDashboard,
+    },
+    {
+      href: `/workspaces/${workspaceId}`,
+      label: "Workspace",
+      Icon: PanelLeftOpen,
     },
     {
       href: `/workspaces/${workspaceId}/documents`,

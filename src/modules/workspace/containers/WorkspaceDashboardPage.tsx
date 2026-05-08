@@ -5,6 +5,7 @@ import { QuickActionsCard } from "@/modules/workspace/components/dashboard/Quick
 
 
 import { WorkspaceDashboardHero } from "@/modules/workspace/components/dashboard/WorkspaceDashboardHero";
+import DocumentsAutoRefresh from "@/modules/documents/components/DocumentsAutoRefresh";
 
 import { listDocumentsByWorkspace } from "@/modules/documents/document.dynamo.repo";
 import { getWorkspaceById } from "@/modules/workspace/workspace.dynamo.repo";
@@ -37,11 +38,12 @@ export async function WorkspaceDashboardPage({
 
   return (
     <section className="h-full overflow-y-auto overflow-x-hidden bg-[#f6f8f7]">
+      <DocumentsAutoRefresh documents={documents} />
       <div className="space-y-4 px-3 sm:px-4 md:px-6 lg:px-8 py-4 pb-20 md:pb-10">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-950">Dashboard</h1>
+          <h1 className="text-2xl font-semibold text-gray-950">Workspace</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Workspace overview, document activity, and ingestion status at a glance.
+            Workspace overview, document activity, members, and AI access at a glance.
           </p>
         </div>
 

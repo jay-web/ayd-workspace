@@ -13,6 +13,14 @@ export function WorkspaceDashboardHero({
   workspaceName,
 }: WorkspaceDashboardHeroProps) {
   const [isMembersOpen, setIsMembersOpen] = useState(false);
+  function formatWorkspaceName(value?: string | null) {
+    if (!value) return "Workspace";
+    return value
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-emerald-100 hover:shadow-lg">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
@@ -24,7 +32,7 @@ export function WorkspaceDashboardHero({
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3">
               <h2 className="truncate text-2xl font-semibold tracking-tight text-gray-950">
-                {workspaceName ?? "Workspace"}
+                {formatWorkspaceName(workspaceName)}
               </h2>
 
               <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">

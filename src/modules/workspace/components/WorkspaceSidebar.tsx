@@ -11,9 +11,25 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 
-export function WorkspaceSidebar({ workspaceId }: { workspaceId: string }) {
+export function WorkspaceSidebar({
+  workspaceId,
+  workspaceName,
+}: {
+  workspaceId: string;
+  workspaceName?: string | null;
+}) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(true);
+
+  function formatWorkspaceName(value?: string | null) {
+    if (!value) return "Current workspace";
+
+    return value
+      .split(" ")
+      .filter(Boolean)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  }
 
   function isActive(path: string) {
     return pathname === path;
@@ -21,9 +37,14 @@ export function WorkspaceSidebar({ workspaceId }: { workspaceId: string }) {
 
   const navItems = [
     {
-      href: `/workspaces/${workspaceId}`,
+      href: `/workspaces`,
       label: "Dashboard",
       icon: LayoutDashboard,
+    },
+    {
+      href: `/workspaces/${workspaceId}`,
+      label: "Workspace",
+      icon: PanelLeftOpen,
     },
     {
       href: `/workspaces/${workspaceId}/documents`,
@@ -48,9 +69,14 @@ export function WorkspaceSidebar({ workspaceId }: { workspaceId: string }) {
           className={`flex items-center ${collapsed ? "justify-center" : "justify-between gap-2 px-1.5"}`}
         >
           {!collapsed ? (
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Workspace
-            </p>
+            <div className="px-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                WORKSPACE
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-800">
+                {formatWorkspaceName(workspaceName)}
+              </p>
+            </div>
           ) : null}
 
           <button

@@ -10,6 +10,7 @@ import {
 import { useMemo, useState } from "react";
 import { ChatDocumentView } from "./chat.types";
 import { useDocumentUpload } from "./useDocumentUpload";
+import { DocumentStatus } from "@/contracts/document";
 
 type ChatDocumentsPanelProps = {
   workspaceId: string;
@@ -21,11 +22,18 @@ type ChatDocumentsPanelProps = {
 
 type DocumentFilter = "ALL" | "READY" | "PROCESSING" | "FAILED";
 
+const POLLING_STATUSES: DocumentStatus[] = [
+  "UPLOADING",
+  "UPLOADED",
+  "PROCESSING",
+];
+
 function getStatusClasses(status: ChatDocumentView["status"]) {
   switch (status) {
     case "READY":
       return "bg-emerald-100 text-emerald-700";
     case "PROCESSING":
+    case "UPLOADED":
       return "bg-amber-100 text-amber-700";
     case "UPLOADING":
       return "bg-sky-100 text-sky-700";
@@ -41,6 +49,7 @@ function getStatusDotColor(status: ChatDocumentView["status"]) {
     case "READY":
       return "bg-emerald-500";
     case "PROCESSING":
+    case "UPLOADED":
       return "bg-amber-400";
     case "UPLOADING":
       return "bg-sky-400";
@@ -55,6 +64,8 @@ function getStatusLabel(status: ChatDocumentView["status"]) {
   switch (status) {
     case "PROCESSING":
       return "Processing now";
+    case "UPLOADED":
+      return "Queued for processing";
     case "UPLOADING":
       return "Uploading now";
     default:
@@ -63,7 +74,7 @@ function getStatusLabel(status: ChatDocumentView["status"]) {
 }
 
 function isActiveStatus(status: ChatDocumentView["status"]) {
-  return status === "PROCESSING" || status === "UPLOADING";
+  return POLLING_STATUSES.includes(status);
 }
 
 function ActiveStatusDots() {
@@ -115,7 +126,11 @@ const [latestUploadedDocumentId, setLatestUploadedDocumentId] = useState<string 
       doc.name.toLowerCase().includes(normalizedSearch);
 
     const matchesStatus =
-      statusFilter === "ALL" || doc.status === statusFilter;
+      statusFilter === "ALL"
+        ? true
+        : statusFilter === "PROCESSING"
+          ? POLLING_STATUSES.includes(doc.status)
+          : doc.status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });

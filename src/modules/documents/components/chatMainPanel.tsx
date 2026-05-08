@@ -33,6 +33,7 @@ function getStatusClasses(status?: ChatDocumentView["status"]) {
     case "READY":
       return "bg-emerald-100 text-emerald-700";
     case "PROCESSING":
+    case "UPLOADED":
       return "bg-amber-100 text-amber-700";
     case "UPLOADING":
       return "bg-sky-100 text-sky-700";

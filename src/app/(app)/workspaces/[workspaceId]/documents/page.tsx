@@ -1,4 +1,3 @@
-import DocumentsAutoRefresh from "@/modules/documents/components/DocumentsAutoRefresh";
 import DocumentsUploadCard from "@/modules/documents/components/DocumentsUploadCard";
 import { listDocumentsByWorkspace } from "@/modules/documents/document.dynamo.repo";
 import { getServerSession } from "@/lib/auth/getServerSession";
@@ -15,26 +14,17 @@ type DocumentListItem = {
   createdAt: string;
 };
 
-function getStatusClasses(status: DocumentListItem["status"]) {
-  switch (status) {
-    case "READY":
-      return "border-emerald-200 bg-emerald-50 text-emerald-700";
-    case "PROCESSING":
-      return "border-amber-200 bg-amber-50 text-amber-700";
-    case "FAILED":
-      return "border-red-200 bg-red-50 text-red-700";
-    case "UPLOADING":
-    default:
-      return "border-slate-200 bg-slate-50 text-slate-700";
-  }
-}
+const POLLING_STATUSES: DocumentStatus[] = [
+  "UPLOADING",
+  "UPLOADED",
+  "PROCESSING",
+];
 
 function getStatusCounts(documents: DocumentListItem[]) {
   return {
     total: documents.length,
     ready: documents.filter((doc) => doc.status === "READY").length,
-    processing: documents.filter((doc) => doc.status === "PROCESSING").length,
-    uploading: documents.filter((doc) => doc.status === "UPLOADING").length,
+    processing: documents.filter((doc) => POLLING_STATUSES.includes(doc.status)).length,
     failed: documents.filter((doc) => doc.status === "FAILED").length,
   };
 }
@@ -63,8 +53,6 @@ export default async function WorkspaceDocumentsPage({
 
   return (
     <section className="h-full min-h-0 overflow-y-auto overflow-x-hidden w-full max-w-full bg-[#f6f8f7]">
-      <DocumentsAutoRefresh documents={documents} />
-
  <div className="min-h-full space-y-4 px-3 sm:px-4 py-3 sm:py-4 pb-24 md:pb-6 w-full max-w-full">
        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -109,7 +97,7 @@ export default async function WorkspaceDocumentsPage({
                     Processing
                   </span>
                   <span className="text-sm font-bold text-amber-800">
-                    {counts.processing + counts.uploading}
+                    {counts.processing}
                   </span>
                 </div>
 

@@ -62,6 +62,10 @@ export async function getDocumentById(input: {
 }
 
 export async function listDocumentsByWorkspace(workspaceId: string) {
+  // Mark stale pending documents as FAILED before returning the list.
+  // This prevents infinite client-side polling when documents get stuck.
+  await markStaleDocumentsAsFailed(workspaceId);
+
   const result = await dynamo.send(
     new QueryCommand({
       TableName: dynamoTables.documents,
@@ -74,6 +78,59 @@ export async function listDocumentsByWorkspace(workspaceId: string) {
   );
 
   return (result.Items ?? []) as DocumentItem[];
+}
+
+const STALE_DOCUMENT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+
+export async function markStaleDocumentsAsFailed(workspaceId: string) {
+  // Query documents for the workspace
+  const result = await dynamo.send(
+    new QueryCommand({
+      TableName: dynamoTables.documents,
+      KeyConditionExpression: "workspaceId = :workspaceId",
+      ExpressionAttributeValues: {
+        ":workspaceId": workspaceId,
+      },
+      ScanIndexForward: false,
+    })
+  );
+
+  const documents = (result.Items ?? []) as DocumentItem[];
+
+  const pendingStatuses: DocumentStatus[] = [
+    "UPLOADING",
+    "UPLOADED",
+    "PROCESSING",
+  ];
+
+  const now = Date.now();
+
+  for (const doc of documents) {
+    try {
+      if (!pendingStatuses.includes(doc.status)) continue;
+
+      const timestamp = doc.updatedAt ?? doc.createdAt;
+      if (!timestamp) continue;
+
+      const last = new Date(timestamp).getTime();
+      if (Number.isNaN(last)) continue;
+
+      if (now - last <= STALE_DOCUMENT_TIMEOUT_MS) continue;
+
+      // Document is stale pending — mark as FAILED
+      await updateDocumentStatus({
+        workspaceId: doc.workspaceId,
+        documentId: doc.documentId,
+        status: "FAILED",
+        errorMessage: "Processing timed out. Please upload again.",
+      });
+    } catch (err) {
+      // Log and continue — do not fail the whole operation
+      // eslint-disable-next-line no-console
+      console.error("markStaleDocumentsAsFailed failed for document", doc.documentId, err);
+      continue;
+    }
+  }
 }
 
 export async function updateDocumentStatus(input: {

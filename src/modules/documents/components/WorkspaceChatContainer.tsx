@@ -33,6 +33,8 @@ export default function WorkspaceChatContainer({
           return "Ready for Q&A";
         case "PROCESSING":
           return "Processing now";
+        case "UPLOADED":
+          return "Queued for processing";
         case "FAILED":
           return "Processing failed";
         case "UPLOADING":

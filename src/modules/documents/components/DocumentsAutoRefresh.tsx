@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { DocumentStatus } from "@/contracts/document";
 
 type DocumentListItem = {
-  status: DocumentStatus
+  status: DocumentStatus;
 };
+
+const POLLING_STATUSES: DocumentStatus[] = [
+  "UPLOADING",
+  "UPLOADED",
+  "PROCESSING",
+];
 
 export default function DocumentsAutoRefresh({
   documents,
@@ -16,15 +22,15 @@ export default function DocumentsAutoRefresh({
   const router = useRouter();
 
   useEffect(() => {
-    const hasProcessing = documents.some(
-      (d) => d.status === "UPLOADING" || d.status === "PROCESSING"
+    const hasPendingDocuments = documents.some((document) =>
+      POLLING_STATUSES.includes(document.status)
     );
 
-    if (!hasProcessing) return;
+    if (!hasPendingDocuments) return;
 
     const interval = setInterval(() => {
       router.refresh();
-    }, 4000); // 4 sec
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [documents, router]);
