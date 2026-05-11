@@ -22,6 +22,7 @@ export default function WorkspaceChatContainer({
   workspaceId,
   documents,
 }: WorkspaceChatContainerProps) {
+  const [mobileDocsOpen, setMobileDocsOpen] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const documentIdFromUrl = searchParams.get("documentId");
@@ -210,38 +211,117 @@ export default function WorkspaceChatContainer({
     }
   }
 
+  const mobileSources = (
+    <ChatCitationsPanel
+      citations={latestAssistantCitations}
+      selectedCitation={selectedCitation}
+      collapsed={citationsCollapsed}
+      onCollapsedChange={setCitationsCollapsed}
+      scrollToTopToken={scrollToTopToken}
+      workspaceId={workspaceId}
+      selectedDocumentId={selectedDocumentId}
+      mobileFullWidth
+    />
+  );
+
   return (
-    <section className="h-full min-h-0 overflow-hidden bg-[#f6f8f7] text-slate-900">
+    <section className="min-h-full overflow-visible bg-[#f6f8f7] text-slate-900 lg:h-full lg:min-h-0 lg:overflow-hidden">
       <DocumentsAutoRefresh documents={availableDocuments} />
-      <div className="flex h-full min-h-0 max-w-none gap-1.5">
-        <ChatDocumentsPanel
-          workspaceId={workspaceId}
-          documents={availableDocuments}
-          selectedDocumentId={selectedDocumentId}
-          onSelectDocument={setSelectedDocumentId}
-          onDocumentsChanged={handleDocumentsChanged}
-        />
+      <div className="flex min-h-full max-w-none flex-col gap-3 lg:h-full lg:min-h-0 lg:flex-row lg:gap-1.5">
+        {/* Desktop documents sidebar */}
+        <div className="hidden lg:block">
+          <ChatDocumentsPanel
+            workspaceId={workspaceId}
+            documents={availableDocuments}
+            selectedDocumentId={selectedDocumentId}
+            onSelectDocument={(id) => setSelectedDocumentId(id)}
+            onDocumentsChanged={handleDocumentsChanged}
+          />
+        </div>
 
-        <ChatMainPanel
-          selectedDocument={selectedDocument}
-          messages={messages}
-          loading={loading}
-          question={question}
-          onQuestionChange={setQuestion}
-          onAsk={handleAsk}
-          onSelectCitation={handleSelectCitation}
-          bottomRef={bottomRef}
-        />
+        {/* Main column: on mobile show selected document card and optionally expanded documents list */}
+        <div className="flex min-w-0 flex-1 flex-col lg:min-h-0">
+          <div className="lg:hidden">
+              <div className="mb-4 w-full">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-600 mb-1">
+                  Selected document
+                </p>
 
-        <ChatCitationsPanel
-          citations={latestAssistantCitations}
-          selectedCitation={selectedCitation}
-          collapsed={citationsCollapsed}
-          onCollapsedChange={setCitationsCollapsed}
-          scrollToTopToken={scrollToTopToken}
-          workspaceId={workspaceId}
-          selectedDocumentId={selectedDocumentId}
-        />
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-2">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 shrink-0 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <span className="text-[13px]">📄</span>
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-gray-900">
+                          {selectedDocument?.name ?? "No document selected"}
+                        </p>
+                        <span className="flex-shrink-0 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                          {selectedDocument?.status ?? "NONE"}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {selectedDocument ? (selectedDocument.status === "READY" ? "Ready for grounded Q&A" : "This document is not ready for chat yet") : "Choose a document first"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setMobileDocsOpen((v) => !v)}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white/70 text-emerald-600"
+                      aria-label="Toggle documents"
+                    >
+                      {mobileDocsOpen ? <span className="">▴</span> : <span className="">▾</span>}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            {mobileDocsOpen ? (
+              <div className="mb-3">
+                <ChatDocumentsPanel
+                  workspaceId={workspaceId}
+                  documents={availableDocuments}
+                  selectedDocumentId={selectedDocumentId}
+                  onSelectDocument={(id) => {
+                    setSelectedDocumentId(id);
+                    setMobileDocsOpen(false);
+                  }}
+                  onDocumentsChanged={handleDocumentsChanged}
+                  mobileFullWidth
+                />
+              </div>
+            ) : null}
+          </div>
+
+          <ChatMainPanel
+            selectedDocument={selectedDocument}
+            messages={messages}
+            loading={loading}
+            question={question}
+            onQuestionChange={setQuestion}
+            onAsk={handleAsk}
+            onSelectCitation={handleSelectCitation}
+            bottomRef={bottomRef}
+            mobileSources={mobileSources}
+          />
+        </div>
+
+        {/* Desktop sources panel */}
+        <div className="hidden lg:block">
+          <ChatCitationsPanel
+            citations={latestAssistantCitations}
+            selectedCitation={selectedCitation}
+            collapsed={citationsCollapsed}
+            onCollapsedChange={setCitationsCollapsed}
+            scrollToTopToken={scrollToTopToken}
+            workspaceId={workspaceId}
+            selectedDocumentId={selectedDocumentId}
+          />
+        </div>
       </div>
     </section>
   );

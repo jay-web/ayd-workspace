@@ -1,13 +1,12 @@
 "use client";
 
 import {
-  ChevronDown,
   FileText,
   Paperclip,
   Send,
   Sparkles,
 } from "lucide-react";
-import { RefObject } from "react";
+import { ReactNode, RefObject } from "react";
 import { ChatCitation, ChatDocumentView, ChatMessage } from "./chat.types";
 
 const SUGGESTED_QUESTIONS = [
@@ -26,6 +25,7 @@ type ChatMainPanelProps = {
   onAsk: (customQuestion?: string) => void;
   onSelectCitation: (citation: ChatCitation) => void;
   bottomRef: RefObject<HTMLDivElement | null>;
+  mobileSources?: ReactNode;
 };
 
 function getStatusClasses(status?: ChatDocumentView["status"]) {
@@ -64,13 +64,14 @@ export default function ChatMainPanel({
   onAsk,
   onSelectCitation,
   bottomRef,
+  mobileSources,
 }: ChatMainPanelProps) {
   const canAsk = selectedDocument?.status === "READY";
 
   return (
-    <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)]">
+    <main className="flex min-h-[calc(100vh-190px)] min-w-0 flex-1 flex-col overflow-hidden rounded-[22px] border border-slate-200/80 bg-white p-2.5 shadow-[0_12px_30px_rgba(15,23,42,0.05)] lg:h-full lg:min-h-0">
       <div className="shrink-0">
-       <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
+       <div className="hidden lg:flex items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-emerald-50 text-emerald-600">
               <FileText className="h-4.5 w-4.5" />
@@ -121,7 +122,7 @@ export default function ChatMainPanel({
 </div>
       </div>
 
-      <div className="ayd-scrollbar min-h-0 flex-1 overflow-y-auto px-0.5 pb-2">
+      <div className="ayd-scrollbar min-h-0 flex-1 overflow-y-auto px-0.5 pb-4 lg:pb-2">
         {messages.length === 0 ? (
           <div className="space-y-3">
           <div className="rounded-[18px] border border-slate-200 bg-slate-50/60 px-4 py-3">
@@ -134,7 +135,7 @@ export default function ChatMainPanel({
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
               {SUGGESTED_QUESTIONS.map((item) => (
                 <button
                   key={item}
@@ -154,18 +155,18 @@ export default function ChatMainPanel({
               <div key={index}>
                 {message.role === "user" ? (
                   <div className="flex justify-end">
-                   <div className="max-w-[78%] rounded-[16px] rounded-tr-md border border-emerald-100 bg-emerald-50 px-4 py-2 shadow-[0_8px_22px_rgba(16,185,129,0.06)]">
-                      <p className="text-[14px] leading-6 text-slate-900">{message.content}</p>
+                   <div className="w-full max-w-full lg:max-w-[78%] min-w-0 rounded-[16px] rounded-tr-md border border-emerald-100 bg-emerald-50 px-4 py-2 shadow-[0_8px_22px_rgba(16,185,129,0.06)]">
+                      <p className="text-[14px] leading-6 text-slate-900 break-words whitespace-normal">{message.content}</p>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-start gap-2">
-                    <div className="mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-emerald-50 text-emerald-600">
+                    <div className="mt-1 hidden h-9 w-9 shrink-0 items-center justify-center rounded-[14px] bg-emerald-50 text-emerald-600 sm:flex">
                       <Sparkles className="h-4 w-4" />
                     </div>
 
-                   <div className="max-w-[84%] rounded-[18px] rounded-tl-md border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
-                      <p className="whitespace-pre-wrap text-[14px] leading-6 text-slate-700">
+                   <div className="w-full max-w-full lg:max-w-[84%] min-w-0 rounded-[18px] rounded-tl-md border border-slate-200 bg-white px-4 py-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.04)]">
+                      <p className="whitespace-pre-wrap break-words text-[14px] leading-6 text-slate-700">
                         {message.content}
                       </p>
 
@@ -205,8 +206,12 @@ export default function ChatMainPanel({
         )}
       </div>
 
+      {mobileSources ? (
+        <div className="mb-2 shrink-0 lg:hidden">{mobileSources}</div>
+      ) : null}
+
       <div className="shrink-0 border-t border-slate-100/80 pt-2.5">
-        <div className="flex items-center gap-3 rounded-[18px] border border-slate-200/80 bg-slate-50/60 px-3 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
+        <div className="flex items-end gap-2 rounded-[18px] border border-slate-200/80 bg-slate-50/60 px-2.5 py-2.5 shadow-[0_8px_18px_rgba(15,23,42,0.03)] sm:items-center sm:gap-3 sm:px-3">
           <button
             type="button"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
@@ -232,16 +237,16 @@ export default function ChatMainPanel({
                   ? "Ask something about this document..."
                   : "This document is still unavailable for chat..."
             }
-            className="max-h-24 min-h-[24px] flex-1 resize-none bg-transparent text-[14px] leading-6 text-slate-700 outline-none placeholder:text-slate-400"
+            className="max-h-24 min-h-[24px] min-w-0 flex-1 resize-none bg-transparent text-[14px] leading-6 text-slate-700 outline-none placeholder:text-slate-400"
           />
 
           <button
             type="button"
             onClick={() => onAsk()}
             disabled={loading || !selectedDocument || !question.trim() || !canAsk}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-2xl bg-emerald-700 px-4 py-2.5 text-[13px] font-semibold text-white shadow-[0_12px_22px_rgba(5,150,105,0.2)] transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-700 text-[13px] font-semibold text-white shadow-[0_12px_22px_rgba(5,150,105,0.2)] transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:gap-1.5 sm:px-4 sm:py-2.5"
           >
-            Ask AYD
+            <span className="hidden sm:inline">Ask AYD</span>
             <Send className="h-3.5 w-3.5" />
           </button>
         </div>

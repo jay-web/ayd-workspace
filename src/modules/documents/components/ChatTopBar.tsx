@@ -6,7 +6,7 @@ export default function ChatTopBar({
   selectedFileName = "No document selected",
 }: Props) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-[28px] border border-slate-200 bg-white px-6 py-5 shadow-sm">
+    <div className="flex w-full flex-col gap-3 rounded-[28px] border border-slate-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div className="flex min-w-0 items-center gap-4">
         <div className="h-12 w-12 shrink-0 rounded-2xl border border-slate-200 bg-slate-50" />
 

@@ -18,6 +18,8 @@ type ChatDocumentsPanelProps = {
   selectedDocumentId: string;
   onSelectDocument: (id: string) => void;
   onDocumentsChanged?: (documentId?: string) => void | Promise<void>;
+  /** When true, render full width on smaller screens instead of fixed desktop width */
+  mobileFullWidth?: boolean;
 };
 
 type DocumentFilter = "ALL" | "READY" | "PROCESSING" | "FAILED";
@@ -93,6 +95,7 @@ export default function ChatDocumentsPanel({
   selectedDocumentId,
   onSelectDocument,
   onDocumentsChanged,
+  mobileFullWidth = false,
 }: ChatDocumentsPanelProps) {
   const [collapsed, setCollapsed] = useState(false);
 const [searchTerm, setSearchTerm] = useState("");
@@ -149,7 +152,9 @@ const [latestUploadedDocumentId, setLatestUploadedDocumentId] = useState<string 
   return (
     <aside
       className={`flex h-full min-h-0 shrink-0 flex-col overflow-hidden rounded-[20px] border border-slate-200/80 bg-white p-2.5 shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-[width] duration-200 ${
-        collapsed ? "w-16" : "w-[320px]"
+        collapsed
+          ? (mobileFullWidth ? "w-16 lg:w-16" : "w-16")
+          : (mobileFullWidth ? "w-full lg:w-[320px]" : "w-[320px]")
       }`}
     >
       <input
@@ -186,27 +191,29 @@ const [latestUploadedDocumentId, setLatestUploadedDocumentId] = useState<string 
               </button>
             ) : null}
 
-            <button
-              type="button"
-              onClick={() => setCollapsed((prev) => !prev)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
-              aria-label={
-                collapsed
-                  ? "Expand documents sidebar"
-                  : "Collapse documents sidebar"
-              }
-              title={
-                collapsed
-                  ? "Expand documents sidebar"
-                  : "Collapse documents sidebar"
-              }
-            >
-              {collapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </button>
+            {!mobileFullWidth ? (
+              <button
+                type="button"
+                onClick={() => setCollapsed((prev) => !prev)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:bg-slate-50 hover:text-slate-700"
+                aria-label={
+                  collapsed
+                    ? "Expand documents sidebar"
+                    : "Collapse documents sidebar"
+                }
+                title={
+                  collapsed
+                    ? "Expand documents sidebar"
+                    : "Collapse documents sidebar"
+                }
+              >
+                {collapsed ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+              </button>
+            ) : null}
           </div>
         </div>
 

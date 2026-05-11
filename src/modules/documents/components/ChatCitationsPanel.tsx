@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ChatCitation } from "./chat.types";
 
@@ -12,6 +12,7 @@ type ChatCitationsPanelProps = {
   collapsed: boolean;
   onCollapsedChange: (value: boolean) => void;
   scrollToTopToken?: string;
+  mobileFullWidth?: boolean;
 };
 
 type CitationWithDocumentId = ChatCitation & {
@@ -54,6 +55,7 @@ export default function ChatCitationsPanel({
   collapsed,
   onCollapsedChange,
   scrollToTopToken,
+  mobileFullWidth = false,
 }: ChatCitationsPanelProps) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [openingKey, setOpeningKey] = useState<string | null>(null);
@@ -133,12 +135,137 @@ export default function ChatCitationsPanel({
     }
   }
 
+  if (mobileFullWidth) {
+    return (
+      <section className="max-w-full overflow-hidden rounded-[16px] border border-slate-200/80 bg-white shadow-[0_8px_18px_rgba(15,23,42,0.03)]">
+        <button
+          type="button"
+          onClick={() => onCollapsedChange(!collapsed)}
+          className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left"
+          aria-expanded={!collapsed}
+        >
+          <div className="min-w-0">
+            <h2 className="text-[14px] font-semibold tracking-[-0.02em] text-slate-900">
+              Sources
+            </h2>
+            <p className="mt-0.5 text-[12px] text-slate-500">
+              {citations.length} source{citations.length === 1 ? "" : "s"} found in this answer
+            </p>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              className={`flex h-6 min-w-[24px] items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                hasCitations
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-slate-100 text-slate-500"
+              }`}
+            >
+              {citations.length}
+            </span>
+            <ChevronDown
+              className={`h-4 w-4 text-slate-500 transition-transform ${
+                collapsed ? "" : "rotate-180"
+              }`}
+            />
+          </div>
+        </button>
+
+        {!collapsed ? (
+          <div className="max-h-56 space-y-2 overflow-y-auto border-t border-slate-100/70 px-3 py-2.5">
+            {citations.length === 0 ? (
+              <div className="rounded-[14px] border border-dashed border-slate-200 bg-slate-50/60 p-4 text-center">
+                <p className="text-[13px] font-medium text-slate-700">No sources yet</p>
+                <p className="mt-1.5 text-[12px] leading-5 text-slate-500">
+                  Ask a question to see citation sources.
+                </p>
+              </div>
+            ) : (
+              citations.map((citation, index) => {
+                const key = getCitationKey(citation, index);
+                const isSelected =
+                  selectedCitation?.chunkIndex === citation.chunkIndex &&
+                  selectedCitation?.pageStart === citation.pageStart &&
+                  selectedCitation?.pageEnd === citation.pageEnd &&
+                  selectedCitation?.content === citation.content;
+
+                const isExpanded = expandedKey === key;
+                const isOpening = openingKey === key;
+                const canOpenPdf = Boolean(workspaceId && (getCitationDocumentId(citation) || selectedDocumentId));
+
+                return (
+                  <div
+                    key={key}
+                    ref={(el) => {
+                      itemRefs.current[key] = el;
+                    }}
+                    className={`max-w-full overflow-hidden rounded-[13px] border p-2.5 shadow-[0_4px_12px_rgba(15,23,42,0.02)] transition ${
+                      isSelected
+                        ? "border-emerald-200 bg-emerald-50/50"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setExpandedKey((prev) => (prev === key ? null : key))}
+                      className="w-full text-left"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-start gap-2">
+                          <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-[10px] font-semibold text-emerald-700">
+                            {index + 1}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[12px] font-semibold text-slate-900">
+                              {getCitationLabel(citation)}
+                            </p>
+                          </div>
+                        </div>
+
+                        <span className="shrink-0 rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                          {getCitationRelevance(index)}%
+                        </span>
+                      </div>
+
+                      <p className="mt-2 line-clamp-3 break-words whitespace-normal text-[12px] leading-5 text-slate-700">
+                        {citation.content}
+                      </p>
+                    </button>
+
+                    {isExpanded ? (
+                      <>
+                        <div className="ayd-scrollbar mt-2.5 max-h-32 overflow-y-auto rounded-[10px] border border-amber-100/50 bg-amber-50/60 px-2.5 py-2 text-[12px] leading-5 text-slate-800">
+                          <p className="whitespace-pre-wrap break-words">{citation.content}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleOpenPdf(citation, key)}
+                          disabled={!canOpenPdf || isOpening}
+                          className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isOpening ? "Opening..." : "Open page in PDF"}
+                          <ExternalLink className="h-3 w-3" />
+                        </button>
+                      </>
+                    ) : null}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+      </section>
+    );
+  }
+
   return (
     <aside
       className={`relative flex h-full min-h-0 shrink-0 overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[0_10px_26px_rgba(15,23,42,0.04)] transition-[width,opacity,transform] duration-250 ease-out ${
         collapsed
-          ? "w-16 translate-x-0 opacity-100"
-          : "w-[360px] translate-x-0 opacity-100"
+          ? (mobileFullWidth ? "w-16 lg:w-16 translate-x-0 opacity-100" : "w-16 translate-x-0 opacity-100")
+          : (mobileFullWidth ? "w-full lg:w-[360px] translate-x-0 opacity-100" : "w-[360px] translate-x-0 opacity-100")
       }`}
     >
       <div
@@ -266,7 +393,7 @@ export default function ChatCitationsPanel({
                       </div>
                     </div>
 
-                    <p className="mt-2 line-clamp-3 text-[12px] leading-5 text-slate-700">
+                    <p className="mt-2 line-clamp-3 break-words whitespace-normal text-[12px] leading-5 text-slate-700">
                       {citation.content}
                     </p>
                   </button>
@@ -274,7 +401,7 @@ export default function ChatCitationsPanel({
                   {isExpanded ? (
                     <>
                       <div className="ayd-scrollbar mt-2.5 max-h-32 overflow-y-auto rounded-[10px] border border-amber-100/50 bg-amber-50/60 px-2.5 py-2 text-[12px] leading-5 text-slate-800">
-                        <p className="whitespace-pre-wrap">{citation.content}</p>
+                        <p className="whitespace-pre-wrap break-words">{citation.content}</p>
                       </div>
 
                       <button
