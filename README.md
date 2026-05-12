@@ -100,8 +100,8 @@ DynamoDB currently stores:
 - Custom document-grounded chat flow
 - Retrieval using stored document vectors/chunks
 - Citation/source-backed answers
+- Basic Amazon Bedrock integration implemented
 - Multi-model architecture planned for future phases
-- Bedrock integration planned for future phases
 
 ---
 
