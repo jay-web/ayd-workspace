@@ -2,6 +2,10 @@
 
 This document describes the current route structure of the AYD Workspace SaaS application.
 
+AYD uses Next.js App Router with a workspace-first structure. Public routes handle landing/authentication, authenticated app routes handle dashboard and workspace screens, and API routes live under `src/app/api`.
+
+---
+
 ## Public Routes
 
 - `/`  
@@ -12,23 +16,17 @@ This document describes the current route structure of the AYD Workspace SaaS ap
 
 ---
 
-## App Routes
+## Authenticated App Routes
 
-These routes are part of the authenticated application experience.
+These routes are part of the signed-in application experience and live under the authenticated app layout.
 
 ### Top-Level App Routes
 
 - `/dashboard`  
-  Global dashboard entry.
-
-- `/documents`  
-  Global documents view.
-
-- `/chat`  
-  Global chat experience.
+  Main dashboard entry for the signed-in user.
 
 - `/workspaces`  
-  List all workspaces available to the signed-in user.
+  Lists all workspaces available to the signed-in user.
 
 ---
 
@@ -40,10 +38,22 @@ These routes are scoped to a specific workspace.
   Workspace dashboard / overview page.
 
 - `/workspaces/[workspaceId]/documents`  
-  Documents belonging to a workspace.
+  Workspace document experience. This is the main document page where users can upload PDFs, view document status, select documents, ask questions, view citations, and open source PDF references.
+
+---
+
+## Removed / Deprecated App Routes
+
+The older global document/chat route idea is no longer part of the main Phase 1 architecture.
+
+- `/documents`  
+  Deprecated as a main product route. Documents are now workspace-scoped.
+
+- `/chat`  
+  Deprecated as a global route. Chat is now document-scoped inside a workspace document page.
 
 - `/workspaces/[workspaceId]/chat`  
-  Chat experience scoped to a workspace.
+  Deprecated as a separate route. Chat is now part of `/workspaces/[workspaceId]/documents` and is tied to the selected document.
 
 ---
 
@@ -52,33 +62,64 @@ These routes are scoped to a specific workspace.
 ### Auth API
 
 - `/api/auth/login`  
-  Starts authentication flow.
+  Starts the Cognito authentication flow.
 
 - `/api/auth/callback`  
-  Handles auth callback and session creation.
+  Handles the Cognito auth callback and session creation.
 
 - `/api/auth/logout`  
-  Clears session and logs user out.
+  Clears session and logs the user out.
 
-- `/api/auth/me`  
-  Returns current authenticated user/session info.
+### Versioned Application API
 
-- `/api/auth/refresh`  
-  Refreshes auth session when needed.
-
-### Application API
-
-- `/api/v1/db-test`  
-  Database connectivity test route.
+- `/api/v1/auth/me`  
+  Returns the current authenticated user and upserts/loads user information used by the app.
 
 - `/api/v1/workspaces`  
   Workspace collection route:
-  - `GET` → list workspaces
+  - `GET` → list workspaces available to the signed-in user
   - `POST` → create workspace
 
 - `/api/v1/workspaces/[workspaceId]`  
   Workspace item route:
   - `GET` → fetch workspace details
+
+- `/api/v1/workspaces/[workspaceId]/members`  
+  Workspace member management route:
+  - `GET` → list workspace members
+  - `POST` → add a workspace member by email and role
+
+- `/api/v1/workspaces/[workspaceId]/documents`  
+  Workspace documents collection route:
+  - `GET` → list documents for the workspace
+  - `POST` → create document metadata and return a presigned S3 upload URL
+
+- `/api/v1/workspaces/[workspaceId]/documents/[documentId]`  
+  Workspace document item route:
+  - `DELETE` → delete document file, chunks, vectors, chat messages, and metadata
+
+- `/api/v1/workspaces/[workspaceId]/documents/[documentId]/chat`  
+  Document-grounded chat route:
+  - `POST` → ask a question against the selected document and return an answer with citations
+
+- `/api/v1/workspaces/[workspaceId]/documents/[documentId]/chat/messages`  
+  Document-scoped chat history route:
+  - `GET` → load saved chat messages for the selected document
+  - `POST` → save a `USER` or `ASSISTANT` chat message for the selected document
+
+---
+
+## Main Route Flow
+
+```txt
+Login
+→ Workspaces
+→ Workspace Dashboard
+→ Workspace Documents
+→ Select Document
+→ Ask Document Questions
+→ View Citations / Open PDF Source
+```
 
 ---
 
@@ -97,7 +138,14 @@ These routes are scoped to a specific workspace.
 
 ## Notes
 
-- The application follows a **workspace-first architecture**.
-- Feature pages are implemented using **Next.js App Router**.
-- API routes are colocated under `src/app/api`.
+- The application follows a workspace-first architecture.
+- Documents are scoped to workspaces.
+- Chat is scoped to the selected workspace document.
+- Chat history is stored per `workspaceId + documentId`.
+- API routes are implemented with Next.js route handlers.
+- API routes use session checks and workspace membership checks.
+- Metadata and chat history are stored in DynamoDB.
+- Uploaded files are stored in S3.
+- Document ingestion is handled asynchronously through SQS and Lambda.
+- Vector retrieval uses S3 Vectors.
 - UI and domain logic are organized into feature modules under `src/modules`.
