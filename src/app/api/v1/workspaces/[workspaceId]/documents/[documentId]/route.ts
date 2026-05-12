@@ -8,6 +8,7 @@ import {
   getDocumentById,
 } from "@/modules/documents/document.dynamo.repo";
 import { deleteDocumentVectorsByKeys } from "@/modules/documents/document.vector.repo";
+import { deleteChatMessagesByDocument } from "@/modules/chat/chat.repo";
 import { s3Client } from "@/lib/aws/s3";
 
 type RouteContext = {
@@ -73,6 +74,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
         : fallbackVectorKeys;
 
     const vectorsResult = await deleteDocumentVectorsByKeys(vectorKeys);
+
+    await deleteChatMessagesByDocument(workspaceId, documentId);
 
     const deletedDocument = await deleteDocumentById({
       workspaceId,
